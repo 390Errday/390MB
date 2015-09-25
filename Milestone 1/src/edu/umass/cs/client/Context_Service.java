@@ -20,6 +20,8 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
+import android.util.Log;
+
 import edu.umass.cs.accelerometer.Filter;
 
 /**
@@ -98,11 +100,11 @@ public class Context_Service extends Service implements SensorEventListener{
 				showNotification();
 				//Set up filter
 				//Following sets up smoothing filter from mcrowdviz
-				int SMOOTH_FACTOR = 10;
-				filter = new Filter(SMOOTH_FACTOR);
+//				int SMOOTH_FACTOR = 10;
+//				filter = new Filter(SMOOTH_FACTOR);
 				//OR Use Butterworth filter from mcrowdviz
-				//double CUTOFF_FREQUENCY = 0.3;
-				//filter = new Filter(CUTOFF_FREQUENCY);
+				double CUTOFF_FREQUENCY = 0.9;
+				filter = new Filter(CUTOFF_FREQUENCY);
 				stepCount = 0;
 				break;
 			}
@@ -331,6 +333,7 @@ public class Context_Service extends Service implements SensorEventListener{
 	 * @return
 	 */
 	public int detectSteps(double filt_acc_x, double filt_acc_y, double filt_acc_z) {
+		Log.i("Accel Reading", "X: " + filt_acc_x + " Y: " + filt_acc_y + " Z: " + filt_acc_z);
 		return 0;
 	}
 

@@ -51,7 +51,7 @@ public class Filter {
 	 * @param cutoffFrequency
 	 */
 	public Filter(double cutoffFrequency) {
-		FILTER_TYPE = FilterType.SMOOTHING;
+		FILTER_TYPE = FilterType.BUTTERWORTH;
 		CUTOFF_FREQUENCY = cutoffFrequency;
 		xv = new double[NUM_ACCEL_FIELDS][3];
 		yv = new double[NUM_ACCEL_FIELDS][3];
