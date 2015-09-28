@@ -333,8 +333,43 @@ public class Context_Service extends Service implements SensorEventListener{
 	 * @return
 	 */
 	public int detectSteps(double filt_acc_x, double filt_acc_y, double filt_acc_z) {
-		Log.i("Accel Reading", "X: " + filt_acc_x + " Y: " + filt_acc_y + " Z: " + filt_acc_z);
+		//find magnitude and remove gravity
+		double filt_acc = Math.sqrt(Math.pow(filt_acc_x, 2) + Math.pow(filt_acc_y, 2) + Math.pow(filt_acc_z, 2));
+		filt_acc -= 9.8;
+
+		//calculate and print threshold
+		double threshold = calculateDynamicThreshold(filt_acc);
+		Log.i("Threshold", threshold + "");
 		return 0;
+	}
+
+	private static final double UNDEFINED_THRESHOLD = 1000.0;
+	double threshold = UNDEFINED_THRESHOLD;
+	int thresholdCount = 0;
+	double thresholdMax = 0.0;
+	double thresholdMin = 0.0;
+	/**
+	 * This should return a threshold level calculated from 50 accelerometer readings.
+	 * The threshold level is updated after each group of 50 readings.
+	 * If less than 50 readings, returns the constant UNDEFINED_THRESHOLD;
+	 * @param filt_acc
+	 * @return
+	 */
+	public double calculateDynamicThreshold(double filt_acc){
+		if(thresholdCount == 50){
+			threshold = (thresholdMax + thresholdMin)/2;
+			thresholdCount = 0;
+			thresholdMax = 0.0;
+			thresholdMin = 0.0;
+		}
+		if(filt_acc > thresholdMax){
+			thresholdMax = filt_acc;
+		}
+		if(filt_acc < thresholdMin){
+			thresholdMin = filt_acc;
+		}
+		thresholdCount++;
+		return threshold;
 	}
 
 }
