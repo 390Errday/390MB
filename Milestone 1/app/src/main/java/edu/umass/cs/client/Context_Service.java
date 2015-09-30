@@ -1,6 +1,7 @@
 package edu.umass.cs.client;
 
 import java.util.ArrayList;
+import java.util.Date;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -100,8 +101,8 @@ public class Context_Service extends Service implements SensorEventListener{
 				showNotification();
 				//Set up filter
 				//Following sets up smoothing filter from mcrowdviz
-//				int SMOOTH_FACTOR = 10;
-//				filter = new Filter(SMOOTH_FACTOR);
+				//int SMOOTH_FACTOR = 10;
+				//filter = new Filter(SMOOTH_FACTOR);
 				//OR Use Butterworth filter from mcrowdviz
 				double CUTOFF_FREQUENCY = 0.9;
 				filter = new Filter(CUTOFF_FREQUENCY);
@@ -263,6 +264,7 @@ public class Context_Service extends Service implements SensorEventListener{
 		showNotification();
 		isRunning = true;
 		sInstance = this;
+		Log.i("exist", "not being skipped");
 		mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
 		mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 	}
@@ -332,24 +334,10 @@ public class Context_Service extends Service implements SensorEventListener{
 	 * @param filt_acc_z
 	 * @return
 	 */
-	/**
-	 * This should return number of steps detected.
-	 * @param filt_acc_x
-	 * @param filt_acc_y
-	 * @param filt_acc_z
-	 * @return
-	 */
 	public int detectSteps(double filt_acc_x, double filt_acc_y, double filt_acc_z) {
-
-
-		//find magnitude and remove gravity
 		double filt_acc = Math.sqrt(Math.pow(filt_acc_x, 2) + Math.pow(filt_acc_y, 2) + Math.pow(filt_acc_z, 2));
 		filt_acc -= 9.8;
-
-		//calculate and print threshold
 		double threshold = calculateDynamicThreshold(filt_acc);
-
-		//calculate step
 		return calculateStep(filt_acc, threshold);
 	}
 
