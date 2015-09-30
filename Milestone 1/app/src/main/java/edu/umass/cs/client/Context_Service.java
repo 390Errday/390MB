@@ -1,7 +1,6 @@
 package edu.umass.cs.client;
 
 import java.util.ArrayList;
-import java.util.Date;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -34,18 +33,8 @@ import edu.umass.cs.accelerometer.Filter;
  */
 public class Context_Service extends Service implements SensorEventListener{
 
-	/**
-	 * Notification manager to display notifications
-	 */
 	private NotificationManager nm;
-	
-	/**
-	 * SensorManager
-	 */
 	private SensorManager mSensorManager;
-    /**
-     * Accelerometer Sensor
-     */
     private Sensor mAccelerometer;
 
 	//List of bound clients/activities to this service
@@ -66,18 +55,23 @@ public class Context_Service extends Service implements SensorEventListener{
 	private static boolean isRunning = false;
 	private static boolean isAccelRunning = false;
 	private static final int NOTIFICATION_ID = 777;
-	
-	/**
-	 * Filter class required to filter noise from accelerometer
-	 */
-	private Filter filter = null;
-	/**
-	 * Step count to be displayed in UI
-	 */
-	private int stepCount = 0;
-	
+
 	//Messenger used by clients
 	final Messenger mMessenger = new Messenger(new IncomingHandler());
+
+	//Used for determining a dynamic threshold
+	private static final double MIN_THRESHOLD = .5;
+	private int thresholdCount = 0;
+	double[] prev_acc_values = new double[500];
+
+	//Used for determining when a step has occurred
+	private static final double UNDEFINED_ACC = -1000;
+	double prev_filt_acc = UNDEFINED_ACC;
+	long prev_step_time = 0;
+
+	private Filter filter = null;
+	private double threshold = MIN_THRESHOLD;
+	private int stepCount = 0;
 
 	/**
 	 * Handler to handle incoming messages
@@ -171,8 +165,6 @@ public class Context_Service extends Service implements SensorEventListener{
 			}
 		}
 	}
-	
-	
 
 	/**
 	 * On Binding, return a binder
@@ -181,10 +173,6 @@ public class Context_Service extends Service implements SensorEventListener{
 	public IBinder onBind(Intent intent) {
 		return mMessenger.getBinder();
 	}
-
-
-	
-	
 
 	//Start service automatically if we reboot the phone
 	public static class Context_BGReceiver extends BroadcastReceiver {
@@ -230,19 +218,6 @@ public class Context_Service extends Service implements SensorEventListener{
         nm.notify(NOTIFICATION_ID, notification);
 	}
 
-
-
-
-	
-
-
-
-
-
-	
-
-
-
 	/* getInstance() and isRunning() are required by the */
 	static Context_Service getInstance(){
 		return sInstance;
@@ -255,8 +230,6 @@ public class Context_Service extends Service implements SensorEventListener{
 	protected static boolean isAccelerometerRunning() {
 		return isAccelRunning;
 	}
-
-
 
 	@Override
 	public void onCreate() {
@@ -278,21 +251,11 @@ public class Context_Service extends Service implements SensorEventListener{
 		Intent mobilityIntent = new Intent(this,Context_Service.class);
 		startService(mobilityIntent);
 	}
-	
-	
-	
+
 	@Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         return START_STICKY; // run until explicitly stopped.
     }
-
-	
-	
-	
-	
-
-	
-
 
 	/* (non-Javadoc)
 	 * @see android.hardware.SensorEventListener#onAccuracyChanged(android.hardware.Sensor, int)
@@ -341,10 +304,6 @@ public class Context_Service extends Service implements SensorEventListener{
 		return calculateStep(filt_acc, threshold);
 	}
 
-	private static final double MIN_THRESHOLD = .5;
-	double threshold = MIN_THRESHOLD;
-	int thresholdCount = 0;
-	double[] prev_acc_values = new double[500];
 	/**
 	 * This should return a threshold level calculated from 50 accelerometer readings.
 	 * The threshold level is updated after each group of 50 readings.
@@ -369,9 +328,6 @@ public class Context_Service extends Service implements SensorEventListener{
 		return threshold;
 	}
 
-	private static final double UNDEFINED = -1000;
-	double prev_filt_acc = UNDEFINED;
-	long prev_step_time;
 	/**
 	 * This should return either a 1 or 0 depending on if a step was detected.
 	 * @param filt_acc
@@ -379,7 +335,7 @@ public class Context_Service extends Service implements SensorEventListener{
 	 * @return
 	 */
 	private int calculateStep(double filt_acc, double threshold){
-		if(prev_filt_acc == UNDEFINED) {
+		if(prev_filt_acc == UNDEFINED_ACC) {
 			prev_filt_acc = filt_acc;
 			return 0;
 		}
