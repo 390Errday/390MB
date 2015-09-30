@@ -332,44 +332,82 @@ public class Context_Service extends Service implements SensorEventListener{
 	 * @param filt_acc_z
 	 * @return
 	 */
+	/**
+	 * This should return number of steps detected.
+	 * @param filt_acc_x
+	 * @param filt_acc_y
+	 * @param filt_acc_z
+	 * @return
+	 */
 	public int detectSteps(double filt_acc_x, double filt_acc_y, double filt_acc_z) {
+
+
 		//find magnitude and remove gravity
 		double filt_acc = Math.sqrt(Math.pow(filt_acc_x, 2) + Math.pow(filt_acc_y, 2) + Math.pow(filt_acc_z, 2));
 		filt_acc -= 9.8;
 
 		//calculate and print threshold
 		double threshold = calculateDynamicThreshold(filt_acc);
-		Log.i("Threshold", threshold + "");
-		return 0;
+
+		//calculate step
+		return calculateStep(filt_acc, threshold);
 	}
 
-	private static final double UNDEFINED_THRESHOLD = 1000.0;
-	double threshold = UNDEFINED_THRESHOLD;
+	private static final double MIN_THRESHOLD = .5;
+	double threshold = MIN_THRESHOLD;
 	int thresholdCount = 0;
-	double thresholdMax = 0.0;
-	double thresholdMin = 0.0;
+	double[] prev_acc_values = new double[500];
 	/**
 	 * This should return a threshold level calculated from 50 accelerometer readings.
 	 * The threshold level is updated after each group of 50 readings.
-	 * If less than 50 readings, returns the constant UNDEFINED_THRESHOLD;
+	 * If less than the minimum accepted reading for a threshold, returns MIN_THRESHOLD.
+	 * If less than 50 readings, returns the MIN_THRESHOLD;
 	 * @param filt_acc
 	 * @return
 	 */
-	public double calculateDynamicThreshold(double filt_acc){
-		if(thresholdCount == 50){
-			threshold = (thresholdMax + thresholdMin)/2;
+	private double calculateDynamicThreshold(double filt_acc){
+		if(thresholdCount == prev_acc_values.length){
+			double sum = 0.0;
+			for (double prev_acc : prev_acc_values) sum += prev_acc;
+			double calc_threshold = sum/prev_acc_values.length;
+
+			threshold = (calc_threshold > MIN_THRESHOLD) ? calc_threshold : MIN_THRESHOLD;
+
 			thresholdCount = 0;
-			thresholdMax = 0.0;
-			thresholdMin = 0.0;
+			prev_acc_values = new double[prev_acc_values.length];
 		}
-		if(filt_acc > thresholdMax){
-			thresholdMax = filt_acc;
-		}
-		if(filt_acc < thresholdMin){
-			thresholdMin = filt_acc;
-		}
+		prev_acc_values[thresholdCount] = filt_acc;
 		thresholdCount++;
 		return threshold;
+	}
+
+	private static final double UNDEFINED = -1000;
+	double prev_filt_acc = UNDEFINED;
+	long prev_step_time;
+	/**
+	 * This should return either a 1 or 0 depending on if a step was detected.
+	 * @param filt_acc
+	 * @param threshold
+	 * @return
+	 */
+	private int calculateStep(double filt_acc, double threshold){
+		if(prev_filt_acc == UNDEFINED) {
+			prev_filt_acc = filt_acc;
+			return 0;
+		}
+
+		boolean prevAboveThresh = prev_filt_acc > threshold;
+		boolean currBelowThresh = filt_acc <= threshold;
+		boolean enoughTimeElapsed = System.currentTimeMillis() - prev_step_time > 250;
+
+		if(prevAboveThresh && currBelowThresh && enoughTimeElapsed) {
+			prev_step_time = System.currentTimeMillis();
+
+			prev_filt_acc = filt_acc;
+			return 1;
+		}
+		prev_filt_acc = filt_acc;
+		return 0;
 	}
 
 }
