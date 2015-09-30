@@ -320,8 +320,8 @@ public class Context_Service extends Service implements SensorEventListener{
 
 			threshold = (calc_threshold > MIN_THRESHOLD) ? calc_threshold : MIN_THRESHOLD;
 
-			thresholdCount = 0;
 			prev_acc_values = new double[prev_acc_values.length];
+			thresholdCount = 0;
 		}
 		prev_acc_values[thresholdCount] = filt_acc;
 		thresholdCount++;
@@ -346,12 +346,13 @@ public class Context_Service extends Service implements SensorEventListener{
 
 		if(prevAboveThresh && currBelowThresh && enoughTimeElapsed) {
 			prev_step_time = System.currentTimeMillis();
-
 			prev_filt_acc = filt_acc;
 			return 1;
 		}
-		prev_filt_acc = filt_acc;
-		return 0;
+		else {
+			prev_filt_acc = filt_acc;
+			return 0;
+		}
 	}
 
 }
