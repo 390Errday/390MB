@@ -27,8 +27,20 @@ import edu.umass.cs.accelerometer.Filter;
 /**
  * 
  * Context_Service: This is a sample class to reads sensor data (accelerometer). 
- * 
- * @author CS390MB
+ *
+ * Division of work:
+ * 	- All design was done together on a whiteboard.
+ * 	- All programming was done together (“pair programming”) using Ryan’s computer.
+ *	- Testing was done using Arif’s phone primarily by Arif.
+ *
+ * Notes:
+ * 	- When calculating the dynamic threshold, we found that 500 accelerometer
+ * 	readings from Arif’s phone gave us a good amount of data to work with. On
+ * 	different phones (especially older ones) where accelerometer readings come at
+ * 	different speeds, this could diminish our algorithm. Ideally in the future we
+ * 	will switch to a time-based model.
+ *
+ * @author CS390MB, Arif Topcu, Swana Weng, Ryan Stanley
  * 
  */
 public class Context_Service extends Service implements SensorEventListener{
