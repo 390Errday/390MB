@@ -271,14 +271,9 @@ public class Context_Service extends Service implements SensorEventListener{
 	@Override
 	public void onSensorChanged(SensorEvent event) {
 		if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-			
 			float accel[] = event.values;
 			sendAccelValuesToUI(accel[0], accel[1], accel[2]);
-			
-			
-			/**
-			 * TODO: Step Detection
-			 */
+
 			//First, Get filtered values
 			double filtAcc[] = filter.getFilteredValues(accel[0], accel[1], accel[2]);
 			//Now, increment 'stepCount' variable if you detect any steps here
@@ -305,14 +300,15 @@ public class Context_Service extends Service implements SensorEventListener{
 	}
 
 	/**
-	 * This should return a threshold level calculated from 50 accelerometer readings.
-	 * The threshold level is updated after each group of 50 readings.
-	 * If less than the minimum accepted reading for a threshold, returns MIN_THRESHOLD.
+	 * This should return a threshold level calculated from 500 accelerometer readings.
+	 * The threshold level is updated after each group of 500 readings.
+	 * If the threshold calculated is too small, returns MIN_THRESHOLD.
 	 * If less than 50 readings, returns the MIN_THRESHOLD;
 	 * @param filt_acc
 	 * @return
 	 */
 	private double calculateDynamicThreshold(double filt_acc){
+		//set threshold and reset calculator after 500 readings
 		if(thresholdCount == prev_acc_values.length){
 			double sum = 0.0;
 			for (double prev_acc : prev_acc_values) sum += prev_acc;
@@ -335,6 +331,7 @@ public class Context_Service extends Service implements SensorEventListener{
 	 * @return
 	 */
 	private int calculateStep(double filt_acc, double threshold){
+		//If we do not have a previous accel reading, no step occurred
 		if(prev_filt_acc == UNDEFINED_ACC) {
 			prev_filt_acc = filt_acc;
 			return 0;
@@ -344,11 +341,13 @@ public class Context_Service extends Service implements SensorEventListener{
 		boolean currBelowThresh = filt_acc <= threshold;
 		boolean enoughTimeElapsed = System.currentTimeMillis() - prev_step_time > 250;
 
+		//We found a step!
 		if(prevAboveThresh && currBelowThresh && enoughTimeElapsed) {
 			prev_step_time = System.currentTimeMillis();
 			prev_filt_acc = filt_acc;
 			return 1;
 		}
+		//No step was found!
 		else {
 			prev_filt_acc = filt_acc;
 			return 0;
