@@ -328,7 +328,6 @@ public class Context_Service extends Service implements SensorEventListener{
 
 		//Feature vector is not null only when it has buffered
 		//at least 5 seconds of data
-
 		if (features != null) {
             //Classify
             try {
