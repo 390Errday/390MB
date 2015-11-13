@@ -45,6 +45,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -285,7 +287,7 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 	private int npixels;
 
 	//number of frames to record
-	private final int nframe=1000;
+	private final int nframe=2000;
 	//frame countdown till nframe
 	private int frameCount=0;
 	//bpm result
@@ -332,6 +334,9 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 		mCamera = camera;
 		if (mCamera != null) {
 			mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
+			for(Size o : mSupportedPreviewSizes) {
+				Log.d("test", ""+ o.height + " x " + o.width);
+			}
 			requestLayout();
 		}
 	}
@@ -364,7 +369,7 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 		if (mSupportedPreviewSizes != null) {
 			//Choose smallest Prewvie Size
 			//128x96
-			mPreviewSize = mSupportedPreviewSizes.get(mSupportedPreviewSizes.size() - 1);
+			mPreviewSize = mSupportedPreviewSizes.get(10);
 			//mPreviewSize= getOptimalPreviewSize(mSupportedPreviewSizes, width, height);
 
 			Log.i("finalwidth: ",""+mPreviewSize.width);
@@ -557,7 +562,7 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 		decodeYUV420SP(pixels, data, mPreviewSize.width,  mPreviewSize.height);  
 		hexStr=Integer.toHexString(pixels[0]);
 
-		for (int i=0;i<npixels;i++){
+		for (int i=0;i<npixels;i+=3){
 
 			hexStr=Integer.toHexString(pixels[i]);
 
@@ -574,13 +579,14 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 
 		sum=0;
 
-		if (frameCount<nframe && frameCount!=-1){	
+		if (frameCount<nframe && frameCount!=-1){
+			long time = System.currentTimeMillis();
 			meanreds[frameCount]=mean;
-			meanredsTimestamps[frameCount]=System.currentTimeMillis();
-
+			meanredsTimestamps[frameCount]=time;
+			processData(time, mean);
 
 			frameCount++;
-			Log.d("FILE: ","RECORDING..."+frameCount);
+			//Log.d("FILE: ","RECORDING..."+frameCount);
 
 		}
 		else if(frameCount==-1){
@@ -595,6 +601,97 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 
 	}  
 
+	int bufferSize = 200;
+	long lastTime = System.currentTimeMillis();
+	long bufferTime = 5000;
+	int bufferIndex = 0;
+	long[] timeBuffer = new long[bufferSize];
+	double[] meanBuffer = new double[bufferSize];
+	public void processData(long time, double mean) {
+		if(time - lastTime > bufferTime) {
+			//analyse
+			calculateHeartbeat2(timeBuffer, meanBuffer, time - lastTime);
+			calculateHeartbeat3(timeBuffer, meanBuffer, time - lastTime);
+
+			// reset
+			lastTime = time;
+			bufferIndex = 0;
+			timeBuffer = new long[bufferSize];
+			meanBuffer = new double[bufferSize];
+		}
+		else {
+			timeBuffer[bufferIndex] = time;
+			meanBuffer[bufferIndex] = mean;
+			bufferIndex++;
+		}
+	}
+
+	public void calculateHeartbeat3(long[] timeBuffer, double[] meanBuffer, long timeWindow) {
+		double lastPoint = 0;
+		int heartbeat = 0;
+		double localMin = 0;
+		double localMax = 0;
+		long localMinTime = 0;
+		ArrayList<Long> localMinTimes = new ArrayList<Long>(meanBuffer.length);
+		for(int i = 0; i < meanBuffer.length; i++) {
+			double point = meanBuffer[i];
+			if (point == 0.0) break;
+			if (point < lastPoint) { //is the slope negative
+				localMin = point;
+				localMinTime = timeBuffer[i];
+				if (localMax < lastPoint) {
+					localMax = lastPoint;
+				}
+			} else {
+				if (localMax - localMin > 0.45) {
+					//found a real drop
+					localMinTimes.add(localMinTime);
+				}
+				localMax = 0;
+				localMin = 0;
+			}
+			lastPoint = point;
+		}
+		long avg = 0;
+		for (int i = 1; i < localMinTimes.size(); i++) {
+			long point = localMinTimes.get(i);
+			long prevPoint = localMinTimes.get(i-1);
+			avg += (point - prevPoint);
+		}
+
+		long avgTimePerBeat = avg/(localMinTimes.size()-1);
+		if(avgTimePerBeat > 0) Log.i("heartbeat3:", ""+60000 / avgTimePerBeat);
+		else Log.i("zero", "zero");
+
+
+	}
+
+	public void calculateHeartbeat2(long[] timeBuffer, double[] meanBuffer, long timeWindow) {
+//		Log.i("timebuffer", Arrays.toString(timeBuffer));
+//		Log.i("meanBuffer", Arrays.toString(meanBuffer));
+		double lastPoint = 0;
+		int heartbeat = 0;
+		double localMin = 0;
+		double localMax = 0;
+		for(double point : meanBuffer) {
+			if(point == 0.0) break;
+			if(point < lastPoint) { //is the slope negative
+				localMin = point;
+				if(localMax < lastPoint) {
+					localMax = lastPoint;
+				}
+			}
+			else {
+				if(localMax - localMin > 0.45) {
+					heartbeat++;
+				}
+				localMax = 0;
+				localMin = 0;
+			}
+			lastPoint = point;
+		}
+		Log.i("heartbeat2:", ""+(heartbeat*60000)/timeWindow);
+	}
 
 	//This method writes the red pixel values in a text file and stored it in Downloads/MyPPG
 	public void generateDATA() {
