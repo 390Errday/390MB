@@ -78,6 +78,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 // Need the following import to get access to the app resources, since this
 // class is in a sub-package.
 
@@ -93,7 +94,7 @@ public class CameraPreview extends Activity implements OnClickListener{
 
 	boolean isMeasuring=false;
 	Button btn_startmeasure;
-	TextView txt_status,txt_result;
+	TextView txt_status, activityValue, heartRateValue;
 	// The first rear facing camera
 	int defaultCameraId;
 
@@ -110,7 +111,9 @@ public class CameraPreview extends Activity implements OnClickListener{
 
 		setContentView(R.layout.activity_main);
 		txt_status=(TextView)findViewById(R.id.txt_status);
-		txt_result=(TextView)findViewById(R.id.txt_result);
+		activityValue = (TextView) findViewById(R.id.activityValue);
+		heartRateValue = (TextView) findViewById(R.id.heartRateValue);
+		Log.i("heartRateVlue", heartRateValue.toString());
 
 
 		//Set the buttons and the text accordingly
@@ -125,6 +128,7 @@ public class CameraPreview extends Activity implements OnClickListener{
 
 		FrameLayout preview = (FrameLayout) findViewById(R.id.cam_preview);
 		preview.addView(mPreview);
+		preview.setOnClickListener(this);
 
 		// Find the total number of cameras available
 		numberOfCameras = Camera.getNumberOfCameras();
@@ -143,43 +147,36 @@ public class CameraPreview extends Activity implements OnClickListener{
 
 
 	public void onClick(View v){
-
 		//Start measuring PPG
-		if(v==btn_startmeasure){
+		if (v==btn_startmeasure) {
 			Parameters p = mCamera.getParameters();
-
-			if (!isMeasuring){
+			if (!isMeasuring) {
 				txt_status.setText("Measuring...");
-
-				isMeasuring=true;
-
-				//				//Turn on the flash
-				//				p.setFlashMode(Parameters.FLASH_MODE_TORCH);	
-
-				// Start the preview
-				//mCamera.startPreview();
-			} 
-			else{
-
-				//Turn off the flash
+				btn_startmeasure.setText("Stop");
+				p.setFlashMode(Parameters.FLASH_MODE_TORCH);
+				mCamera.setParameters(p);
+				mCamera.startPreview();
+				isMeasuring = true;
+			} else {
+				txt_status.setText("Please Press Start");
+				btn_startmeasure.setText("Start");
 				p.setFlashMode(Parameters.FLASH_MODE_OFF);
+				mCamera.setParameters(p);
+				mCamera.stopPreview();
+				isMeasuring = false;
 			}
-
-			mCamera.setParameters(p);
 		}
-
 		//if you tap the camera view on the screen, autofocus the camera
-		if(v==mPreview){
+		if(isMeasuring && v.getId()==R.id.cam_preview) {
 			mCamera.autoFocus(null);
-			txt_status.setText("Camera Focused");
+			Toast toast = Toast.makeText(this, "Camera focused", Toast.LENGTH_SHORT);
+			toast.show();
 		}
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
-
-		// Open the default i.e. the first rear facing camera.
 		mCamera = Camera.open();
 		cameraCurrentlyLocked = defaultCameraId;
 		mPreview.setCamera(mCamera);
@@ -207,55 +204,7 @@ public class CameraPreview extends Activity implements OnClickListener{
 		inflater.inflate(R.menu.camera_menu, menu);
 		return true;
 	}
-
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		// Handle item selection
-		switch (item.getItemId()) {
-		case R.id.switch_cam:
-			// check for availability of multiple cameras
-			if (numberOfCameras == 1) {
-				AlertDialog.Builder builder = new AlertDialog.Builder(this);
-				builder.setMessage(this.getString(R.string.camera_alert))
-				.setNeutralButton("Close", null);
-				AlertDialog alert = builder.create();
-				alert.show();
-				return true;
-			}
-
-			// OK, we have multiple cameras.
-			// Release this camera -> cameraCurrentlyLocked
-			if (mCamera != null) {
-				mCamera.stopPreview();
-				mPreview.setCamera(null);
-				mCamera.release();
-				mCamera = null;
-			}
-
-			// Acquire the next camera and request Preview to reconfigure
-			// parameters.
-			mCamera = Camera
-					.open((cameraCurrentlyLocked + 1) % numberOfCameras);
-			cameraCurrentlyLocked = (cameraCurrentlyLocked + 1)
-					% numberOfCameras;
-			mPreview.switchCamera(mCamera);
-
-			// Start the preview
-			mCamera.startPreview();
-			return true;
-		default:
-			return super.onOptionsItemSelected(item);
-		}
-		
-	}
-
-
-
-
 }
-
-
-// ----------------------------------------------------------------------
 
 /**
  * A simple wrapper around a Camera and a SurfaceView that renders a centered preview of the Camera
@@ -287,7 +236,7 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 	private int npixels;
 
 	//number of frames to record
-	private final int nframe=2000;
+	private final int nframe=500;
 	//frame countdown till nframe
 	private int frameCount=0;
 	//bpm result
@@ -310,12 +259,8 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 	private double[] meanreds=new double[nframe];
 	private long[] meanredsTimestamps=new long[nframe];
 
-	//	private double[] meanredsFiltSm=new double[nframe];
-	//	private double[] meanredsFiltBW=new double[nframe];
-
 	int pp=0;
 	String hexStr="";
-	//private int indexFrame=0;
 
 	Preview(Context context) {
 		super(context);
@@ -341,22 +286,6 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 		}
 	}
 
-	public void switchCamera(Camera camera) {
-		setCamera(camera);
-		try {
-			camera.setPreviewDisplay(mHolder);
-		} catch (IOException exception) {
-			Log.e(TAG, "IOException caused by setPreviewDisplay()", exception);
-		}
-		Camera.Parameters parameters = camera.getParameters();
-		parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
-
-
-		requestLayout();
-
-		camera.setParameters(parameters);
-	}
-
 	@Override
 	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 		// We purposely disregard child measurements because act as a
@@ -367,13 +296,8 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 		setMeasuredDimension(width, height);
 
 		if (mSupportedPreviewSizes != null) {
-			//Choose smallest Prewvie Size
-			//128x96
 			mPreviewSize = mSupportedPreviewSizes.get(10);
-			//mPreviewSize= getOptimalPreviewSize(mSupportedPreviewSizes, width, height);
-
 			Log.i("finalwidth: ",""+mPreviewSize.width);
-
 		}
 	}
 
@@ -381,7 +305,6 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 	protected void onLayout(boolean changed, int l, int t, int r, int b) {
 		if (changed && getChildCount() > 0) {
 			final View child = getChildAt(0);
-
 			final int width = r - l;
 			final int height = b - t;
 
@@ -408,32 +331,15 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 	public void surfaceCreated(SurfaceHolder holder) {
 		// The Surface has been created, acquire the camera and tell it where
 		// to draw.
-
-		if (mCamera == null)
-		{
+		if(mCamera == null) {
 			mCamera = Camera.open();
-
-			//CameraPreview myActivity = (CameraPreview) getContext();
-			//setCameraDisplayOrientation(myActivity, CameraInfo.CAMERA_FACING_BACK, mCamera);
-
 		}
-
 		try {
 			if (mCamera != null) {
 				mCamera.setPreviewDisplay(holder);
-
-				parameters = mCamera.getParameters();  
-
-
-				//Turn on the flash
-				parameters.setFlashMode(Parameters.FLASH_MODE_TORCH);
-				mCamera.setParameters(parameters);	
-
-				//mPreviewSize = parameters.getPreviewSize();  
-				pixels = new int[mPreviewSize.width * mPreviewSize.height];  
-
+				pixels = new int[mPreviewSize.width * mPreviewSize.height];
 				npixels=pixels.length;
-
+				parameters = mCamera.getParameters();
 				int dataBufferSize=(int)(mPreviewSize.height*mPreviewSize.width*
 						(ImageFormat.getBitsPerPixel(parameters.getPreviewFormat())/8.0));
 
@@ -444,10 +350,7 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 				mCamera.addCallbackBuffer(new byte[dataBufferSize]);
 				//ADDED AFTER SETTTING THE PREVIEW DISPLAY!!! NOT BEFORE
 				//sets the camera callback to be the one defined in this class  
-				mCamera.setPreviewCallbackWithBuffer(this);  
-
-				//mCamera.setPreviewCallback(this);
-
+				mCamera.setPreviewCallbackWithBuffer(this);
 			}
 		} catch (IOException exception) {
 			Log.e(TAG, "IOException caused by setPreviewDisplay()", exception);
@@ -462,92 +365,13 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 		}
 	}
 
-	//	private Size getSmallerPreviewSize(List<Size> sizes){
-	//		
-	//	}
-
-	private Size getOptimalPreviewSize(List<Size> sizes, int w, int h) {
-		final double ASPECT_TOLERANCE = 0.1;
-		double targetRatio = (double) w / h;
-		if (sizes == null) return null;
-
-		Size optimalSize = null;
-		double minDiff = Double.MAX_VALUE;
-
-		int targetHeight = h;
-
-		// Try to find an size match aspect ratio and size
-		for (Size size : sizes) {
-			double ratio = (double) size.width / size.height;
-			if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) continue;
-			if (Math.abs(size.height - targetHeight) < minDiff) {
-				optimalSize = size;
-				minDiff = Math.abs(size.height - targetHeight);
-			}
-		}
-
-		// Cannot find the one match the aspect ratio, ignore the requirement
-		if (optimalSize == null) {
-			minDiff = Double.MAX_VALUE;
-			for (Size size : sizes) {
-				if (Math.abs(size.height - targetHeight) < minDiff) {
-					optimalSize = size;
-					minDiff = Math.abs(size.height - targetHeight);
-				}
-			}
-		}
-		return optimalSize;
-	}
-
 	public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-		// Now that the size is known, set up the camera parameters and begin
-		// the preview.
+		Camera.Parameters parameters = mCamera.getParameters();
 		parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
 		requestLayout();
-
-		//ADDED: remove this: since we already initialized parameters
-		//Camera.Parameters parameters = mCamera.getParameters();
 		mCamera.setParameters(parameters);
-		mCamera.startPreview();
-
-		//mCamera.stopPreview();	
-		//CameraPreview myActivity = (CameraPreview) getContext();
-		//setCameraDisplayOrientation(myActivity, 1, mCamera);
-		//mCamera.startPreview();
-
+//		mCamera.startPreview();
 	}
-
-
-
-	public void setCameraDisplayOrientation(Activity activity,
-			int cameraId, android.hardware.Camera camera) {
-		android.hardware.Camera.CameraInfo info =
-				new android.hardware.Camera.CameraInfo();
-		android.hardware.Camera.getCameraInfo(cameraId, info);
-		int rotation = activity.getWindowManager().getDefaultDisplay()
-				.getRotation();
-		int degrees = 0;
-		switch (rotation) {
-		case Surface.ROTATION_0: degrees = 0; break;
-		case Surface.ROTATION_90: degrees = 90; break;
-		case Surface.ROTATION_180: degrees = 180; break;
-		case Surface.ROTATION_270: degrees = 270; break;
-		}
-
-		int result;
-		if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-			result = (info.orientation + degrees) % 360;
-			result = (360 - result) % 360;  // compensate the mirror
-		} else {  // back-facing
-			result = (info.orientation - degrees + 360) % 360;
-		}
-		camera.setDisplayOrientation(result);
-	}
-
-	public int[] getPixelArray(){
-		return pixels;
-	}
-
 
 	//Reference: http://stackoverflow.com/questions/20298699/onpreviewframe-data-image-to-imageview
 	//define what the callback should do before rendering a preview frame to the screen
@@ -586,6 +410,7 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 			processData(time, mean);
 
 			frameCount++;
+			Log.d("frameCount: ", ""+frameCount);
 			//Log.d("FILE: ","RECORDING..."+frameCount);
 
 		}
@@ -594,8 +419,9 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 
 		}
 		else{
-			Log.d("FILE: ","CREATED!");
 			generateDATA();
+			Toast toast = Toast.makeText(myActivity, "Data written!", Toast.LENGTH_SHORT);
+			toast.show();
 			frameCount=-1;
 		}
 
@@ -610,9 +436,19 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 	public void processData(long time, double mean) {
 		if(time - lastTime > bufferTime) {
 			//analyse
-			calculateHeartbeat2(timeBuffer, meanBuffer, time - lastTime);
-			calculateHeartbeat3(timeBuffer, meanBuffer, time - lastTime);
-
+			int heartRate = calculateHeartbeat3(timeBuffer, meanBuffer, time - lastTime);
+			if(heartRate > 40 && heartRate < 200) {
+				myActivity.heartRateValue.setText(Integer.toString(heartRate));
+			}
+			if(heartRate > 40 && heartRate < 95) {
+				myActivity.activityValue.setText("Resting");
+			}
+			else if (heartRate >= 95 && heartRate <= 200) {
+				myActivity.activityValue.setText("Exercising");
+			}
+			else {
+				myActivity.activityValue.setText("N/A");
+			}
 			// reset
 			lastTime = time;
 			bufferIndex = 0;
@@ -626,9 +462,8 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 		}
 	}
 
-	public void calculateHeartbeat3(long[] timeBuffer, double[] meanBuffer, long timeWindow) {
+	public int calculateHeartbeat3(long[] timeBuffer, double[] meanBuffer, long timeWindow) {
 		double lastPoint = 0;
-		int heartbeat = 0;
 		double localMin = 0;
 		double localMax = 0;
 		long localMinTime = 0;
@@ -659,11 +494,13 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 			avg += (point - prevPoint);
 		}
 
-		long avgTimePerBeat = avg/(localMinTimes.size()-1);
-		if(avgTimePerBeat > 0) Log.i("heartbeat3:", ""+60000 / avgTimePerBeat);
-		else Log.i("zero", "zero");
-
-
+		int numIntervals = localMinTimes.size() - 1;
+		int heartRate = 0;
+		if(numIntervals > 0) {
+			long avgTimePerBeat = avg / (numIntervals);
+			if (avgTimePerBeat > 0) heartRate = (int) (60000 / avgTimePerBeat);
+		}
+		return heartRate;
 	}
 
 	public void calculateHeartbeat2(long[] timeBuffer, double[] meanBuffer, long timeWindow) {
