@@ -436,7 +436,7 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 	public void processData(long time, double mean) {
 		if(time - lastTime > bufferTime) {
 			//analyse
-			int heartRate = calculateHeartbeat3(timeBuffer, meanBuffer, time - lastTime);
+			int heartRate = calculateHeartbeat(timeBuffer, meanBuffer, time - lastTime);
 			if(heartRate > 40 && heartRate < 200) {
 				myActivity.heartRateValue.setText(Integer.toString(heartRate));
 			}
@@ -462,7 +462,7 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 		}
 	}
 
-	public int calculateHeartbeat3(long[] timeBuffer, double[] meanBuffer, long timeWindow) {
+	public int calculateHeartbeat(long[] timeBuffer, double[] meanBuffer, long timeWindow) {
 		double lastPoint = 0;
 		double localMin = 0;
 		double localMax = 0;
@@ -479,7 +479,7 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 				}
 			} else {
 				if (localMax - localMin > 0.45) {
-					//found a real drop
+					//found a real dip
 					localMinTimes.add(localMinTime);
 				}
 				localMax = 0;
@@ -503,32 +503,6 @@ class Preview extends ViewGroup implements SurfaceHolder.Callback, PreviewCallba
 		return heartRate;
 	}
 
-	public void calculateHeartbeat2(long[] timeBuffer, double[] meanBuffer, long timeWindow) {
-//		Log.i("timebuffer", Arrays.toString(timeBuffer));
-//		Log.i("meanBuffer", Arrays.toString(meanBuffer));
-		double lastPoint = 0;
-		int heartbeat = 0;
-		double localMin = 0;
-		double localMax = 0;
-		for(double point : meanBuffer) {
-			if(point == 0.0) break;
-			if(point < lastPoint) { //is the slope negative
-				localMin = point;
-				if(localMax < lastPoint) {
-					localMax = lastPoint;
-				}
-			}
-			else {
-				if(localMax - localMin > 0.45) {
-					heartbeat++;
-				}
-				localMax = 0;
-				localMin = 0;
-			}
-			lastPoint = point;
-		}
-		Log.i("heartbeat2:", ""+(heartbeat*60000)/timeWindow);
-	}
 
 	//This method writes the red pixel values in a text file and stored it in Downloads/MyPPG
 	public void generateDATA() {
