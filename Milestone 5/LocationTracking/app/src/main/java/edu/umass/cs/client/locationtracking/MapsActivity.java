@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Color;
+import android.media.MediaPlayer;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -45,6 +46,7 @@ public class MapsActivity extends FragmentActivity {
     private boolean mIsBound;
     private final Messenger mMessenger = new Messenger(new IncomingHandler());
     Handler handler;
+    private MediaPlayer mPlayer;
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
 
     @Override
@@ -53,6 +55,7 @@ public class MapsActivity extends FragmentActivity {
         setContentView(R.layout.activity_maps);
         mActivity = this;
         handler = new Handler();
+        mPlayer = MediaPlayer.create(this, R.raw.quack);
         bindToService();
         setUpMapIfNeeded();
     }
@@ -146,6 +149,8 @@ public class MapsActivity extends FragmentActivity {
             counter++;
             drawHullFromPoints(points.toArray(new GPSLocation[points.size()]));
         }
+
+        playQuack();
     }
 
     private void drawHullFromPoints(GPSLocation[] locations){
@@ -206,6 +211,9 @@ public class MapsActivity extends FragmentActivity {
         dao.close();
     }
 
+    public void playQuack() {
+        mPlayer.start();
+    }
 
     //------ Handle connecting/talking to the service ------//
 
