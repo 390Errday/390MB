@@ -15,6 +15,8 @@ import android.os.Message;
 import android.os.RemoteException;
 import android.util.Log;
 
+import com.google.android.gms.maps.model.LatLng;
+
 import java.util.ArrayList;
 
 import edu.umass.cs.client.sql.GPSLocation;
@@ -34,9 +36,11 @@ public class ContextService extends Service implements LocationListener{
     public final static int MSG_UNREGISTER_CLIENT = 1;
     public final static int MSG_START_LOCATION = 2;
     public final static int MSG_STOP_LOCATION = 3;
-    public final static int MSG_LOCATION_STARTED = 4;
-    public final static int MSG_LOCATION_STOPPED = 5;
-    public final static int MSG_LOCATION_UPDATE = 6;
+    public final static int MSG_GET_LOCATION = 4;
+    public final static int MSG_LOCATION_STARTED = 5;
+    public final static int MSG_LOCATION_STOPPED = 6;
+    public final static int MSG_LOCATION_UPDATE = 7;
+    public final static int MSG_LOCATION_CURRENT = 8;
     private final static long MIN_TIME = 5000;
     private final static float MIN_DISTANCE = 0;
 
@@ -76,15 +80,27 @@ public class ContextService extends Service implements LocationListener{
                 case MSG_STOP_LOCATION:
                     stopLocation();
                     break;
+                case MSG_GET_LOCATION:
+                    getLocation();
+                    break;
             }
         }
     }
 
-    private void sendMessageToUI(int message) {
+    private void sendMessageToUI(int message, LatLng location) {
         for (int i=mClients.size()-1; i>=0; i--) {
             try {
                 // Send message value
-                mClients.get(i).send(Message.obtain(null, message));
+                Message msg = Message.obtain(null, message);
+
+                if(location != null) {
+                    Bundle b = new Bundle();
+                    b.putDouble("lat", location.latitude);
+                    b.putDouble("lng", location.longitude);
+                    msg.setData(b);
+                }
+
+                mClients.get(i).send(msg);
             } catch (RemoteException e) {
                 // The client is dead. Remove it from the list; we are going through the list from back to front so this is safe to do inside the loop.
                 mClients.remove(i);
@@ -104,23 +120,28 @@ public class ContextService extends Service implements LocationListener{
                 ContextService.MIN_DISTANCE,
                 sInstance, getMainLooper());
         isLocationRunning = true;
-        sendMessageToUI(MSG_LOCATION_STARTED);
+        sendMessageToUI(MSG_LOCATION_STARTED, null);
     }
 
     private void stopLocation() {
         locationManager.removeUpdates(sInstance);
         isLocationRunning = false;
-        sendMessageToUI(MSG_LOCATION_STOPPED);
+        sendMessageToUI(MSG_LOCATION_STOPPED, null);
     }
 
+    public void getLocation() {
+        Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        if(lastKnownLocation != null) {
+            LatLng location = new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude());
+            sendMessageToUI(MSG_LOCATION_CURRENT, location);
+        }
+    }
 
     //TODO: Consider moving this out and save location every X seconds for clustering
     @Override
     public void onLocationChanged(Location location) {
         Log.i("Location", location.toString());
-        sendMessageToUI(MSG_LOCATION_UPDATE);
-
-        //TODO: Consider using 'if (location.getSpeed() !> 0)' for better data
+        sendMessageToUI(MSG_LOCATION_UPDATE, null);
 
         LocationDAO dao = new LocationDAO(getApplicationContext());
         dao.openWrite();

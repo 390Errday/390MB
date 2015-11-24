@@ -1,5 +1,7 @@
 package edu.umass.cs.client.cluster;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -35,6 +37,8 @@ public class DBScan<T extends Clusterable<T>> {
 
     /** The state of a point - is it in a cluster or has it been marked as noise? */
     private enum State {
+        /** The point has been visited, but not marked as NOISE or CLUSTERED yet */
+        VISITED,
         /** The point has not yet been visited */
         UNVISITED,
         /** The point has been visited and has determined to be noise (no cluster) */
@@ -94,7 +98,7 @@ public class DBScan<T extends Clusterable<T>> {
             if (states.get(p) == State.UNVISITED) {     // for all unvisited points
                 List<T> neighbors = regionQuery(p, points);
 
-                if (neighbors.size() >= minPts) {        // that do not have a low density
+                if (neighbors.size() < minPts) {        // that do not have a low density
                     states.put(p, State.NOISE);
                 } else {                                // perform clustering
                     c = new Cluster<T>();
@@ -141,15 +145,16 @@ public class DBScan<T extends Clusterable<T>> {
             T neighbor = neighborPts.get(i);
             State neighborState = states.get(neighbor);
             if (neighborState == State.UNVISITED) {             // for each unvisited neighbor
-                states.put(neighbor, State.CLUSTERED);
+                states.put(neighbor, State.VISITED);
                 List<T> neighborNeighborPts = regionQuery(neighbor, neighborPts);
                 if (neighborNeighborPts.size() >= minPts) {     // that does not have a low density
                     for (T nnp : neighborNeighborPts) {
+                        if(!neighborPts.contains(nnp))
                             neighborPts.add(nnp);
                     }
                 }
             }
-            if (neighborState != State.CLUSTERED) {             // if neighbor does not have cluster
+            if (states.get(neighbor) != State.CLUSTERED) {             // if neighbor does not have cluster
                 cluster.addPoint(neighbor);                     // add to the cluster
                 states.put(p, State.CLUSTERED);
             }

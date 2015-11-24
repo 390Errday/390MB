@@ -1,12 +1,30 @@
 package edu.umass.cs.client.locationtracking;
 
+import android.annotation.SuppressLint;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Color;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.Toast;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolygonOptions;
@@ -22,13 +40,38 @@ import edu.umass.cs.client.sql.LocationDAO;
 
 public class MapsActivity extends FragmentActivity {
 
+    MapsActivity mActivity = null;
+    private Messenger mService = null;
+    private boolean mIsBound;
+    private final Messenger mMessenger = new Messenger(new IncomingHandler());
+    Handler handler;
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+        mActivity = this;
+        handler = new Handler();
+        bindToService();
         setUpMapIfNeeded();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_clear:
+                clearDatabase();
+                return true;
+        }
+        return true;
     }
 
     @Override
@@ -36,6 +79,17 @@ public class MapsActivity extends FragmentActivity {
         super.onResume();
         setUpMapIfNeeded();
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try {
+            unbindFromService();
+        } catch (Throwable t) {
+        }
+    }
+
+    //------ Handle Google Maps API v2 ------//
 
     /**
      * Sets up the map if it is possible to do so (i.e., the Google Play services APK is correctly
@@ -60,7 +114,7 @@ public class MapsActivity extends FragmentActivity {
                     .getMap();
             // Check if we were successful in obtaining the map.
             if (mMap != null) {
-                setUpMap();
+                setUpMap(null);
             }
         }
     }
@@ -70,7 +124,9 @@ public class MapsActivity extends FragmentActivity {
      * <p/>
      * This should only be called once and when we are sure that {@link #mMap} is not null.
      */
-    private void setUpMap() {
+    public void setUpMap(View view) {
+        mMap.clear();
+
         LocationDAO dao = new LocationDAO(getApplicationContext());
         dao.openRead();
         GPSLocation[] locations = dao.getAllLocations();
@@ -104,6 +160,156 @@ public class MapsActivity extends FragmentActivity {
             Log.i("drawHull", "options visible?: " + options.isVisible());
         } catch (IndexOutOfBoundsException e) {
             Log.i("FUCK", e.toString());
+        }
+    }
+
+    private void moveMap(LatLng location) {
+        CameraPosition cameraPosition = new CameraPosition.Builder()
+                .target(location)      // Sets the center of the map
+                .zoom(17)              // Sets the zoom
+                .build();              // Creates a CameraPosition from the builder
+        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+    }
+
+    //------ Handle onclick events for buttons ------//
+
+    public void toggleLocation(View view) {
+        if(ContextService.isLocationRunning()){
+            try {
+                Message msg = Message.obtain(null, ContextService.MSG_STOP_LOCATION);
+                msg.replyTo = mMessenger;
+                mService.send(msg);
+                ImageButton btn = (ImageButton) findViewById(R.id.imageButton);
+                btn.setImageResource(R.drawable.ic_pin_drop_blue_grey_500_48dp);
+            } catch (RemoteException e) {
+                // Service crashed!
+            }
+        }
+        else {
+            try {
+                Message msg = Message.obtain(null, ContextService.MSG_START_LOCATION);
+                msg.replyTo = mMessenger;
+                mService.send(msg);
+                view.setBackgroundResource(R.drawable.ic_pin_drop_blue_600_48dp);
+                ImageButton btn = (ImageButton) findViewById(R.id.imageButton);
+                btn.setImageResource(R.drawable.ic_pin_drop_blue_600_48dp);
+            } catch (RemoteException e) {
+                // Service crashed!
+            }
+        }
+    }
+
+    private void clearDatabase() {
+        LocationDAO dao = new LocationDAO(getApplicationContext());
+        dao.openWrite();
+        dao.deleteAll();
+        dao.close();
+    }
+
+
+    //------ Handle connecting/talking to the service ------//
+
+    public void bindToService() {
+        // Start Background Service if not already started
+        if(!ContextService.isRunning()) {
+            Intent cs = new Intent(this, ContextService.class);
+            startService(cs);
+        }
+
+        handler.postDelayed(new BindRunnable(), 1000);
+    }
+
+    private class BindRunnable implements Runnable {
+        public void run() {
+            // Try to bind to service
+            if (ContextService.isRunning()) {
+                bindService(new Intent(mActivity, ContextService.class), mConnection, Context.BIND_AUTO_CREATE);
+            }
+            else {
+                handler.postDelayed(new BindRunnable(), 1000);
+            }
+        }
+    }
+
+    void unbindFromService() {
+        if (mIsBound) {
+            // If we have received the service, and hence registered with it, then now is the time to unregister.
+            if (mService != null) {
+                try {
+                    Message msg = Message.obtain(null, ContextService.MSG_UNREGISTER_CLIENT);
+                    msg.replyTo = mMessenger;
+                    mService.send(msg);
+                } catch (RemoteException e) {
+                    // There is nothing special we need to do if the service has crashed.
+                }
+            }
+            // Detach our existing connection.
+            unbindService(mConnection);
+        }
+    }
+
+    /**
+     * Connection with the service
+     */
+    private ServiceConnection mConnection = new ServiceConnection() {
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            mService = new Messenger(service);
+            mIsBound = true;
+            try {
+                Message msg = Message.obtain(null, ContextService.MSG_REGISTER_CLIENT);
+                msg.replyTo = mMessenger;
+                mService.send(msg);
+            } catch (RemoteException e) {
+                // In this case the service has crashed before we could even do anything with it
+            }
+
+            // Once binded, we want to zoom into current location.
+            try{
+                Message msg = Message.obtain(null, ContextService.MSG_GET_LOCATION);
+                msg.replyTo = mMessenger;
+                mService.send(msg);
+            } catch (RemoteException e) {
+                // Service crashed!
+            }
+        }
+
+        public void onServiceDisconnected(ComponentName className) {
+            // This is called when the connection with the service has been unexpectedly disconnected - process crashed.
+            mIsBound = false;
+            mService = null;
+        }
+    };
+
+    /**
+     * Handler to handle incoming messages
+     */
+    @SuppressLint("HandlerLeak")
+    class IncomingHandler extends Handler {
+        @Override
+        public void handleMessage(Message msg) {
+            Toast toast;
+            switch (msg.what) {
+                case ContextService.MSG_LOCATION_STARTED:
+                    toast = Toast.makeText(mActivity, "Location tracking started!", Toast.LENGTH_SHORT);
+                    toast.setGravity(Gravity.CENTER, 0, 20);
+                    toast.show();
+                    break;
+                case ContextService.MSG_LOCATION_STOPPED:
+                    toast = Toast.makeText(mActivity, "Location tracking stopped!", Toast.LENGTH_SHORT);
+                    toast.setGravity(Gravity.CENTER, 0, 20);
+                    toast.show();
+                    break;
+                case ContextService.MSG_LOCATION_UPDATE:
+                    toast = Toast.makeText(mActivity, "New location added.", Toast.LENGTH_SHORT);
+                    toast.setGravity(Gravity.CENTER, 0, 20);
+                    toast.show();
+                    break;
+                case ContextService.MSG_LOCATION_CURRENT:
+                    double lat = msg.getData().getDouble("lat");
+                    double lng = msg.getData().getDouble("lng");
+                    moveMap(new LatLng(lat, lng));
+                    break;
+            }
         }
     }
 }
