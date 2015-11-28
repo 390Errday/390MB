@@ -16,7 +16,7 @@ import java.util.List;
  * Created by ariftopcu on 11/27/15.
  */
 public class DatabaseHandler extends SQLiteOpenHelper{
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
     private static final String DATABASE_NAME = "biosessions";
     private static final String TABLE_SESSIONS = "sessions";
 
@@ -26,6 +26,10 @@ public class DatabaseHandler extends SQLiteOpenHelper{
     private static final String KEY_END_TIME = "end_time";
     private static final String KEY_VIEWER_NAME = "viewer_name";
     private static final String KEY_COMPLETE = "complete";
+    private static final String KEY_HR_ARRAY = "hr_array";
+    private static final String KEY_HR_TIMES = "hr_times";
+    private static final String KEY_GSR_ARRAY = "gsr_array";
+    private static final String KEY_GSR_TIMES = "gsr_times";
 
     //private static final String KEY_IMDB_ID = "imdb_id";
 
@@ -38,7 +42,9 @@ public class DatabaseHandler extends SQLiteOpenHelper{
         String CREATE_CONTACTS_TABLE = "CREATE TABLE " + TABLE_SESSIONS + "("
                 + KEY_ID + " INTEGER PRIMARY KEY," + KEY_MOVIE_NAME + " TEXT,"
                 + KEY_START_TIME + " INTEGER," + KEY_END_TIME + " INTEGER,"
-                + KEY_VIEWER_NAME + " TEXT," + KEY_COMPLETE + " INTEGER"
+                + KEY_VIEWER_NAME + " TEXT," + KEY_COMPLETE + " INTEGER,"
+                + KEY_HR_ARRAY + " TEXT," + KEY_HR_TIMES + " TEXT,"
+                + KEY_GSR_ARRAY + " TEXT," + KEY_GSR_TIMES + " TEXT"
                 + ")";
         db.execSQL(CREATE_CONTACTS_TABLE);
     }
@@ -60,6 +66,10 @@ public class DatabaseHandler extends SQLiteOpenHelper{
         values.put(KEY_MOVIE_NAME, session.getMovieName());
         values.put(KEY_VIEWER_NAME, session.getViewerName());
         values.put(KEY_COMPLETE, 0);
+        values.put(KEY_HR_ARRAY, "");
+        values.put(KEY_HR_TIMES, "");
+        values.put(KEY_GSR_ARRAY, "");
+        values.put(KEY_GSR_TIMES, "");
 
         long id = db.insert(TABLE_SESSIONS, null, values);
         db.close();
@@ -94,6 +104,68 @@ public class DatabaseHandler extends SQLiteOpenHelper{
         return sessionList;
     }
 
+    public void deleteMe() {
+        String selectQuery = "SELECT  * FROM " + TABLE_SESSIONS;
+
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        if (cursor.moveToFirst()) {
+            do {
+                Log.d("**CURSOR_HR_ARRAY**", cursor.getString(cursor.getColumnIndex(KEY_HR_ARRAY)));
+                Log.d("**CURSOR_HR_TIMES**", cursor.getString(cursor.getColumnIndex(KEY_HR_TIMES)));
+                Log.d("**CURSOR_GSR_ARRA**", cursor.getString(cursor.getColumnIndex(KEY_GSR_ARRAY)));
+                Log.d("**CURSOR_GSR_TIME**", cursor.getString(cursor.getColumnIndex(KEY_GSR_TIMES)));
+            } while (cursor.moveToNext());
+        }
+    }
+
+    public int appenHR(long id, int[] hr, long[] hrTimes) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        String getHrQuery = "SELECT *" + " FROM " + TABLE_SESSIONS + " WHERE " + KEY_ID + "=" + id;
+        Cursor cursor = db.rawQuery(getHrQuery, null);
+        String hrString = "";
+        String hrTimesString = "";
+        if(cursor.moveToFirst()) {
+            hrString = cursor.getString(cursor.getColumnIndex(KEY_HR_ARRAY));
+            hrTimesString = cursor.getString(cursor.getColumnIndex(KEY_HR_TIMES));
+            for(int i = 0; i < hr.length; i++) {
+                hrString += "," + hr[i];
+                hrTimesString += "," + hrTimes[i];
+            }
+        }
+
+        ContentValues values = new ContentValues();
+        values.put(KEY_HR_ARRAY, hrString);
+        values.put(KEY_HR_TIMES, hrTimesString);
+
+        return db.update(TABLE_SESSIONS, values, KEY_ID + " = ?",
+                new String[] { String.valueOf(id) });
+    }
+
+    public int appenGsr(long id, int[] gsr, long[] gsrTimes) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        String getHrQuery = "SELECT *" + " FROM " + TABLE_SESSIONS + " WHERE " + KEY_ID + "=" + id;
+        Cursor cursor = db.rawQuery(getHrQuery, null);
+        String gsrString = "";
+        String gsrTimesString = "";
+        if(cursor.moveToFirst()) {
+            gsrString = cursor.getString(cursor.getColumnIndex(KEY_GSR_ARRAY));
+            gsrTimesString = cursor.getString(cursor.getColumnIndex(KEY_GSR_TIMES));
+            for(int i = 0; i < gsr.length; i++) {
+                gsrString += "," + gsr[i];
+                gsrTimesString += "," + gsrTimes[i];
+            }
+        }
+
+        ContentValues values = new ContentValues();
+        values.put(KEY_GSR_ARRAY, gsrString);
+        values.put(KEY_GSR_TIMES, gsrTimesString);
+
+        return db.update(TABLE_SESSIONS, values, KEY_ID + " = ?",
+                new String[] { String.valueOf(id) });
+    }
 //    // Getting single contact
 //    public Session getSession(int id) {
 //        return null;

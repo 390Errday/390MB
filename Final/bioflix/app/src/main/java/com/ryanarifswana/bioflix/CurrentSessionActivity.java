@@ -49,14 +49,22 @@ public class CurrentSessionActivity extends AppCompatActivity {
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     }
 
+//    public void onDestroy() {
+//        super.onDestroy();
+//        finish();
+//    }
+
     private void bindToService() {
         if(!serviceBound) {
             resultsReceiver = new BandResultsReceiver(null);
             Intent intent = new Intent(this, MSBandService.class);
             intent.putExtra("receiver", resultsReceiver);
+            intent.putExtra("movieName", movieName);
+            intent.putExtra("viewerName", viewerName);
             this.bindService(intent, bandConnection, Context.BIND_AUTO_CREATE);
         }
         else {
+            Log.d("Already bound", "starting hr");
             bandService.startHeartRate();
         }
     }
@@ -113,7 +121,7 @@ public class CurrentSessionActivity extends AppCompatActivity {
             MSBandService.LocalBinder binder = (MSBandService.LocalBinder) service;
             bandService = binder.getService();
             bandService.startHeartRate();
-            Log.d("CURRENT SESSION:", "BOUND TO SERVICE");
+            bandService.startGsr();
             serviceBound = true;
         }
 

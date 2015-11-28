@@ -24,6 +24,8 @@ import com.microsoft.band.sensors.BandGsrEventListener;
 import com.microsoft.band.sensors.BandHeartRateEvent;
 import com.microsoft.band.sensors.BandHeartRateEventListener;
 import com.microsoft.band.sensors.HeartRateConsentListener;
+import com.ryanarifswana.bioflix.database.DatabaseHandler;
+import com.ryanarifswana.bioflix.database.model.Session;
 
 import java.lang.ref.WeakReference;
 
@@ -42,12 +44,26 @@ public class MSBandService extends Service {
     public final static String  BUNDLE_GSR_RESISTANCE = "resistance";
     public final static String  BUNDLE_GSR_TIME = "time";
 
+    private final static int HRBUFFER = 20;     //buffer before writing to db
+    private final static int GSRBUFFER = 10;
+
+    private int[] hrArray;
+    private long[] hrTimeArray;
+    private int hrIndex;
+
+    private int[] gsrArray;
+    private long[] gsrTimeArray;
+    private int gsrIndex;
+
+    private long sessionId;
+
     private final IBinder mBinder = new LocalBinder();
     private BandClient client;
     ResultReceiver resultReceiver;
     Bundle hrBundle;
     Bundle gsrBundle;
     Bundle errBundle;
+    DatabaseHandler db;
 
 
     public class LocalBinder extends Binder {
@@ -58,22 +74,70 @@ public class MSBandService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        Log.i("Inside IBINDER", "HERE");
+        db = new DatabaseHandler(this);
         resultReceiver = intent.getParcelableExtra("receiver");
+        newSession(intent.getStringExtra("movieName"), intent.getStringExtra("viewerName"));
         hrBundle = new Bundle();
         gsrBundle = new Bundle();
         errBundle = new Bundle();
+        hrArray = new int[HRBUFFER];
+        hrTimeArray = new long[HRBUFFER];
+        gsrArray = new int[GSRBUFFER];
+        gsrTimeArray = new long[GSRBUFFER];
+        hrIndex = 0;
+        gsrIndex = 0;
+
         return mBinder;
+    }
+
+    public void newSession(String movieName, String viewerName) {
+        Session newSession = new Session(movieName, viewerName);
+        newSession.setStartTime(System.currentTimeMillis());
+        sessionId = db.newSession(newSession);
     }
 
     public void startHeartRate() {
         new HeartRateSubscriptionTask().execute();
     }
+    public void startGsr() {
+        new GsrSubscriptionTask().execute();
+    }
 
     public void requestConsent(WeakReference<Activity> reference) {
         Log.d("Consent received", "True!!");
         new HeartRateConsentTask().execute(reference);
-        new GsrSubscriptionTask().execute();
+    }
+
+    public void addHr(Bundle bundle) {
+        hrArray[hrIndex] = bundle.getInt(BUNDLE_HR_HR);
+        hrTimeArray[hrIndex] = bundle.getLong(BUNDLE_HR_TIME);
+        if(hrIndex == HRBUFFER - 1) {
+            Log.d("*******BEFORE:", "BEFORE********");
+            db.deleteMe();
+            db.appenHR(sessionId, hrArray, hrTimeArray);
+            hrArray = new int[HRBUFFER];
+            hrTimeArray = new long[HRBUFFER];
+            hrIndex = 0;
+            Log.d("*******AFTER:", "AFTER********");
+            db.deleteMe();
+        }
+        else {
+            hrIndex++;
+        }
+    }
+
+    public void addGsr(Bundle bundle) {
+        gsrArray[gsrIndex] = bundle.getInt(BUNDLE_GSR_RESISTANCE);
+        gsrTimeArray[gsrIndex] = bundle.getLong(BUNDLE_GSR_TIME);
+        if(gsrIndex == GSRBUFFER - 1) {
+            db.appenGsr(sessionId, gsrArray, gsrTimeArray);
+            gsrArray = new int[GSRBUFFER];
+            gsrTimeArray = new long[GSRBUFFER];
+            gsrIndex = 0;
+        }
+        else {
+            gsrIndex++;
+        }
     }
 
     public void sendError(String error) {
@@ -86,10 +150,11 @@ public class MSBandService extends Service {
         @Override
         public void onBandGsrChanged(final BandGsrEvent event) {
             if (event != null) {
-                Log.d("GSR Tick", ""+event.getTimestamp());
+                Log.d("GSR Tick", "" + event.getTimestamp());
                 gsrBundle.clear();
                 gsrBundle.putInt(BUNDLE_GSR_RESISTANCE, event.getResistance());
                 gsrBundle.putLong(BUNDLE_GSR_TIME, event.getTimestamp());
+                addGsr(gsrBundle);
                 resultReceiver.send(MSG_GSR_TICK, gsrBundle);
             }
         }
@@ -99,11 +164,12 @@ public class MSBandService extends Service {
         @Override
         public void onBandHeartRateChanged(final BandHeartRateEvent event) {
             if (event != null) {
-                Log.d("HR Tick", ""+event.getTimestamp());
+                Log.d("HR Tick", "" + event.getTimestamp());
                 hrBundle.clear();
                 hrBundle.putInt(BUNDLE_HR_HR, event.getHeartRate());
                 hrBundle.putString(BUNDLE_HR_QUALITY, event.getQuality().toString());
                 hrBundle.putLong(BUNDLE_HR_TIME, event.getTimestamp());
+                addHr(hrBundle);
                 resultReceiver.send(MSG_HR_TICK, hrBundle);
             }
         }
@@ -132,7 +198,7 @@ public class MSBandService extends Service {
                 if (getConnectedBandClient()) {
                     int hardwareVersion = Integer.parseInt(client.getHardwareVersion().await());
                     if (hardwareVersion >= 20) {
-                        sendError("Band is connected.");
+                        //sendError("Band is connected.");
                         client.getSensorManager().registerGsrEventListener(mGsrEventListener);
                     } else {
                         sendError("The Gsr sensor is not supported with your Band version. Microsoft Band 2 is required.\n");

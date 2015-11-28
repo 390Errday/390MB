@@ -7,11 +7,21 @@ public class Session {
     private String id;
     private String movieName;
     private String viewerName;
-    private int startTime;
-    private int endTime;
+    private long startTime;
+    private long endTime;
     private boolean complete;
+    private int[] hrArray;
+    private long[] hrTimes;
+    private int[] gsrArray;
+    private long[] gsrTimes;
 
     public Session() {
+        complete = false;
+    }
+
+    public Session(String movieName, String viewerName) {
+        this.movieName = movieName;
+        this.viewerName = viewerName;
         complete = false;
     }
 
@@ -24,11 +34,23 @@ public class Session {
     public String getViewerName() {
         return viewerName;
     }
-    public int getStartTime() {
+    public long getStartTime() {
         return startTime;
     }
-    public int getEndTime() {
+    public long getEndTime() {
         return endTime;
+    }
+    public int[] getHrArray() {
+        return hrArray;
+    }
+    public long[] getHrTimes() {
+        return hrTimes;
+    }
+    public int[] getGsrArray() {
+        return gsrArray;
+    }
+    public long[] getGsrTimes() {
+        return gsrTimes;
     }
 
     public boolean isComplete(){
@@ -47,15 +69,31 @@ public class Session {
         this.viewerName = viewerName;
     }
 
-    public void setStartTime(int startTime) {
+    public void setStartTime(long startTime) {
         this.startTime = startTime;
     }
 
-    public void setEndTime(int endTime) {
+    public void setEndTime(long endTime) {
         this.endTime = endTime;
     }
 
     public void setComplete(boolean complete) {
         this.complete = complete;
+    }
+
+    public void setHrArray(int[] hrArray) {
+        this.hrArray = hrArray;
+    }
+
+    public void setHrTimes(long[] hrTimes) {
+        this.hrTimes = hrTimes;
+    }
+
+    public void setGsrArray(int[] gsrArray) {
+        this.gsrArray = gsrArray;
+    }
+
+    public void setGsrTimes(long[] gsrTimes) {
+        this.gsrTimes = gsrTimes;
     }
 }
