@@ -59,12 +59,13 @@ public class DatabaseHandler extends SQLiteOpenHelper{
     }
 
     // Adds a new session, returns the id of the session
-    public long newSession(Session session) {
+    public long newSession(String movieName, String viewerName, long startTime) {
         SQLiteDatabase db = this.getWritableDatabase();
 
         ContentValues values = new ContentValues();
-        values.put(KEY_MOVIE_NAME, session.getMovieName());
-        values.put(KEY_VIEWER_NAME, session.getViewerName());
+        values.put(KEY_MOVIE_NAME, movieName);
+        values.put(KEY_VIEWER_NAME, viewerName);
+        values.put(KEY_START_TIME, startTime);
         values.put(KEY_COMPLETE, 0);
         values.put(KEY_HR_ARRAY, "");
         values.put(KEY_HR_TIMES, "");
@@ -74,6 +75,19 @@ public class DatabaseHandler extends SQLiteOpenHelper{
         long id = db.insert(TABLE_SESSIONS, null, values);
         db.close();
         return id;
+    }
+
+    public void endSession(long id, long endTime) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        String query = "SELECT *" + " FROM " + TABLE_SESSIONS + " WHERE " + KEY_ID + "=" + id;
+        Cursor cursor = db.rawQuery(query, null);
+        if(cursor.moveToFirst()) {
+            ContentValues values = new ContentValues();
+            values.put(KEY_END_TIME, endTime);
+            values.put(KEY_COMPLETE, 1);
+            db.update(TABLE_SESSIONS, values, KEY_ID + " = ?", new String[]{String.valueOf(id)});
+        }
     }
 
     //Return complete sessions only
@@ -91,7 +105,7 @@ public class DatabaseHandler extends SQLiteOpenHelper{
                 //only return complete sessions
                 if(cursor.getInt(cursor.getColumnIndex(KEY_COMPLETE)) == 1) {
                     Session session = new Session();
-                    session.setId(cursor.getString(cursor.getColumnIndex(KEY_ID)));
+                    session.setId(cursor.getLong(cursor.getColumnIndex(KEY_ID)));
                     session.setMovieName(cursor.getString(cursor.getColumnIndex(KEY_MOVIE_NAME)));
                     session.setStartTime(cursor.getInt(cursor.getColumnIndex(KEY_START_TIME)));
                     session.setEndTime(cursor.getInt(cursor.getColumnIndex(KEY_END_TIME)));
@@ -122,8 +136,8 @@ public class DatabaseHandler extends SQLiteOpenHelper{
     public int appenHR(long id, int[] hr, long[] hrTimes) {
         SQLiteDatabase db = this.getWritableDatabase();
 
-        String getHrQuery = "SELECT *" + " FROM " + TABLE_SESSIONS + " WHERE " + KEY_ID + "=" + id;
-        Cursor cursor = db.rawQuery(getHrQuery, null);
+        String query = "SELECT *" + " FROM " + TABLE_SESSIONS + " WHERE " + KEY_ID + "=" + id;
+        Cursor cursor = db.rawQuery(query, null);
         String hrString = "";
         String hrTimesString = "";
         if(cursor.moveToFirst()) {
@@ -139,15 +153,14 @@ public class DatabaseHandler extends SQLiteOpenHelper{
         values.put(KEY_HR_ARRAY, hrString);
         values.put(KEY_HR_TIMES, hrTimesString);
 
-        return db.update(TABLE_SESSIONS, values, KEY_ID + " = ?",
-                new String[] { String.valueOf(id) });
+        return db.update(TABLE_SESSIONS, values, KEY_ID + " = ?", new String[] { String.valueOf(id) });
     }
 
     public int appenGsr(long id, int[] gsr, long[] gsrTimes) {
         SQLiteDatabase db = this.getWritableDatabase();
 
-        String getHrQuery = "SELECT *" + " FROM " + TABLE_SESSIONS + " WHERE " + KEY_ID + "=" + id;
-        Cursor cursor = db.rawQuery(getHrQuery, null);
+        String query = "SELECT *" + " FROM " + TABLE_SESSIONS + " WHERE " + KEY_ID + "=" + id;
+        Cursor cursor = db.rawQuery(query, null);
         String gsrString = "";
         String gsrTimesString = "";
         if(cursor.moveToFirst()) {
@@ -163,26 +176,6 @@ public class DatabaseHandler extends SQLiteOpenHelper{
         values.put(KEY_GSR_ARRAY, gsrString);
         values.put(KEY_GSR_TIMES, gsrTimesString);
 
-        return db.update(TABLE_SESSIONS, values, KEY_ID + " = ?",
-                new String[] { String.valueOf(id) });
+        return db.update(TABLE_SESSIONS, values, KEY_ID + " = ?", new String[] { String.valueOf(id) });
     }
-//    // Getting single contact
-//    public Session getSession(int id) {
-//        return null;
-//    }
-//
-//
-//    // Getting contacts Count
-//    public int getSessionCount() {
-//        return 0;
-//    }
-//    // Updating single contact
-//    public int updateSession(Session session) {
-//        return 0;
-//    }
-//
-//    // Deleting single contact
-//    public void deleteSession(Session session) {
-//
-//    }
 }

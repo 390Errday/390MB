@@ -4,7 +4,7 @@ package com.ryanarifswana.bioflix.database.model;
  * Created by ariftopcu on 11/27/15.
  */
 public class Session {
-    private String id;
+    private long id;
     private String movieName;
     private String viewerName;
     private long startTime;
@@ -19,13 +19,14 @@ public class Session {
         complete = false;
     }
 
-    public Session(String movieName, String viewerName) {
+    public Session(String movieName, String viewerName, long startTime) {
         this.movieName = movieName;
         this.viewerName = viewerName;
+        this.startTime = startTime;
         complete = false;
     }
 
-    public String getId() {
+    public long getId() {
         return id;
     }
     public String getMovieName() {
@@ -57,7 +58,7 @@ public class Session {
         return complete;
     }
 
-    public void setId(String id) {
+    public void setId(long id) {
         this.id = id;
     }
 

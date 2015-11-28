@@ -83,7 +83,7 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/startMovie"
+            android:text="@string/startSession"
             android:id="@+id/startButton"
             android:onClick="startMovie"
             android:layout_marginBottom="48dp"

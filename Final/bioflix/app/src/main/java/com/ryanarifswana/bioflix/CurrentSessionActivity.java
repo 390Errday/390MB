@@ -15,6 +15,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
@@ -24,6 +25,7 @@ public class CurrentSessionActivity extends AppCompatActivity {
     private String viewerName;
     private TextView hrRateView;
     private TextView gsrView;
+    private Button startSessionButton;
     MSBandService bandService;
     BandResultsReceiver resultsReceiver;
     boolean serviceBound = false;
@@ -37,10 +39,12 @@ public class CurrentSessionActivity extends AppCompatActivity {
         currentSessionActivity = this;
         mainLayout = (CoordinatorLayout) findViewById(R.id.currentSessionCoordinatorLayout);
         Intent intent = getIntent();
+
         movieName = intent.getStringExtra("movieName");
         viewerName = intent.getStringExtra("viewerName");
         hrRateView = (TextView) findViewById(R.id.hrText);
         gsrView = (TextView) findViewById(R.id.gsrText);
+        startSessionButton = (Button) findViewById(R.id.startButton);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         toolbar.setTitle(movieName);
@@ -63,19 +67,14 @@ public class CurrentSessionActivity extends AppCompatActivity {
             intent.putExtra("viewerName", viewerName);
             this.bindService(intent, bandConnection, Context.BIND_AUTO_CREATE);
         }
-        else {
-            Log.d("Already bound", "starting hr");
-            bandService.startHeartRate();
-        }
     }
 
     //onClickListener for startMovieButton
     public void startMovie(View view) {
-        bandService.startHeartRate();
+        MSBandService.startSession();
     }
 
-    class UpdateHr implements Runnable
-    {
+    class UpdateHr implements Runnable {
         int updatedHr;
 
         public UpdateHr(int updatedHr) {
@@ -86,8 +85,7 @@ public class CurrentSessionActivity extends AppCompatActivity {
         }
     }
 
-    class UpdateGSR implements Runnable
-    {
+    class UpdateGSR implements Runnable {
         int updatedGSR;
 
         public UpdateGSR(int updatedGSR) {
@@ -140,7 +138,6 @@ public class CurrentSessionActivity extends AppCompatActivity {
 
         @Override
         protected void onReceiveResult(int resultCode, Bundle resultData) {
-            Log.d("onReceieveResult", "" + resultCode + " " + resultData.toString());
             switch (resultCode) {
                 case MSBandService.MSG_HR_TICK:
                     runOnUiThread(new UpdateHr(resultData.getInt(MSBandService.BUNDLE_HR_HR)));

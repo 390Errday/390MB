@@ -8,5 +8,5 @@
     <string name="movie_name_hint">Movie Name</string>
     <string name="title_activity_current_session">CurrentSessionActivity</string>
     <string name="empty_recycler_text">You do not have any sessions yet!</string>
-    <string name="startMovie">Start Movie</string>
+    <string name="startSession">Start Session</string>
 </resources>
