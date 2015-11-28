@@ -16,6 +16,7 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Chronometer;
 import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
@@ -25,6 +26,7 @@ public class CurrentSessionActivity extends AppCompatActivity {
     private String viewerName;
     private TextView hrRateView;
     private TextView gsrView;
+    private TextView timer;
     private Button startSessionButton;
     MSBandService bandService;
     BandResultsReceiver resultsReceiver;
@@ -44,6 +46,7 @@ public class CurrentSessionActivity extends AppCompatActivity {
         viewerName = intent.getStringExtra("viewerName");
         hrRateView = (TextView) findViewById(R.id.hrText);
         gsrView = (TextView) findViewById(R.id.gsrText);
+        timer = (TextView) findViewById(R.id.timer);
         startSessionButton = (Button) findViewById(R.id.startButton);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);

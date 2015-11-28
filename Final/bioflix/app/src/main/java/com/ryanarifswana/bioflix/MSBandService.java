@@ -9,9 +9,11 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ResultReceiver;
+import android.os.SystemClock;
 import android.support.design.widget.Snackbar;
 import android.util.Log;
 import android.view.View;
+import android.widget.Chronometer;
 
 import com.microsoft.band.BandClient;
 import com.microsoft.band.BandClientManager;
@@ -46,6 +48,8 @@ public class MSBandService extends Service {
     private final static int HRBUFFER = 5;     //buffer before writing to db
     private final static int GSRBUFFER = 5;
 
+    private static long baseTime;
+
     private static int[] hrArray;
     private static long[] hrTimeArray;
     private static int hrIndex;
@@ -66,6 +70,7 @@ public class MSBandService extends Service {
     private static Bundle gsrBundle;
     private static Bundle errBundle;
     private static DatabaseHandler db;
+
 
 
     public class LocalBinder extends Binder {
@@ -96,14 +101,15 @@ public class MSBandService extends Service {
 
     public static void startSession() {
         if(!inSession) {
-            sessionId = db.newSession(sessionMovieName, sessionViewerName, getCurrentTime());
+            sessionId = db.newSession(sessionMovieName, sessionViewerName, System.currentTimeMillis());
             inSession = true;
+            baseTime = System.currentTimeMillis();
             Log.d("startSession()", "sessionStarted!");
         }
     }
 
     public static void stopSession() {
-        db.endSession();
+        db.endSession(sessionId, getElapsedTime());
         inSession = false;
     }
 
@@ -121,7 +127,7 @@ public class MSBandService extends Service {
 
     public void addHr(Bundle bundle) {
         hrArray[hrIndex] = bundle.getInt(BUNDLE_HR_HR);
-        hrTimeArray[hrIndex] = getCurrentTime();
+        hrTimeArray[hrIndex] = getElapsedTime();
         if(hrIndex == HRBUFFER - 1) {
             Log.d("*******BEFORE:", "BEFORE********");
             db.deleteMe();
@@ -139,7 +145,7 @@ public class MSBandService extends Service {
 
     public void addGsr(Bundle bundle) {
         gsrArray[gsrIndex] = bundle.getInt(BUNDLE_GSR_RESISTANCE);
-        gsrTimeArray[gsrIndex] = getCurrentTime();
+        gsrTimeArray[gsrIndex] = getElapsedTime();
         if(gsrIndex == GSRBUFFER - 1) {
             db.appenGsr(sessionId, gsrArray, gsrTimeArray);
             gsrArray = new int[GSRBUFFER];
@@ -157,8 +163,8 @@ public class MSBandService extends Service {
         resultReceiver.send(MSG_ERROR, errBundle);
     }
 
-    public static long getCurrentTime() {
-        return System.currentTimeMillis();
+    public static long getElapsedTime() {
+        return System.currentTimeMillis() - baseTime;
     }
 
     private BandHeartRateEventListener mHeartRateEventListener = new BandHeartRateEventListener() {

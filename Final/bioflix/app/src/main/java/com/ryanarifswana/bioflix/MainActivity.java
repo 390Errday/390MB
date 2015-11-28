@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -62,7 +63,9 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
         setFloatingActionButton();
         setMovieRecyclerView();
-
+        Log.e("currentThreadTimeMillis", "" + SystemClock.currentThreadTimeMillis());
+        Log.e("elapsedRealtime", ""+SystemClock.elapsedRealtime());
+        Log.e("System.curr", ""+System.currentTimeMillis());
     }
 
     @Override
@@ -173,20 +176,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
-    private void sendToSnackbar(final String string) {
-        this.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Snackbar snackbar = Snackbar
-                        .make(coordinatorLayout, string, Snackbar.LENGTH_LONG);
-                snackbar.show();
-            }
-        });
-    }
-
-
-
 }
 
 

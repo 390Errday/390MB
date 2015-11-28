@@ -144,8 +144,10 @@ public class DatabaseHandler extends SQLiteOpenHelper{
             hrString = cursor.getString(cursor.getColumnIndex(KEY_HR_ARRAY));
             hrTimesString = cursor.getString(cursor.getColumnIndex(KEY_HR_TIMES));
             for(int i = 0; i < hr.length; i++) {
-                hrString += "," + hr[i];
-                hrTimesString += "," + hrTimes[i];
+                if(hr[i] > 0) {
+                    hrString += "," + hr[i];
+                    hrTimesString += "," + hrTimes[i];
+                }
             }
         }
 
@@ -167,8 +169,10 @@ public class DatabaseHandler extends SQLiteOpenHelper{
             gsrString = cursor.getString(cursor.getColumnIndex(KEY_GSR_ARRAY));
             gsrTimesString = cursor.getString(cursor.getColumnIndex(KEY_GSR_TIMES));
             for(int i = 0; i < gsr.length; i++) {
-                gsrString += "," + gsr[i];
-                gsrTimesString += "," + gsrTimes[i];
+                if(gsr[i] > 0) {
+                    gsrString += "," + gsr[i];
+                    gsrTimesString += "," + gsrTimes[i];
+                }
             }
         }
 
