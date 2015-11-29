@@ -118,21 +118,6 @@ public class DatabaseHandler extends SQLiteOpenHelper{
         return sessionList;
     }
 
-    public void deleteMe() {
-        String selectQuery = "SELECT  * FROM " + TABLE_SESSIONS;
-
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery(selectQuery, null);
-        if (cursor.moveToFirst()) {
-            do {
-                Log.d("**CURSOR_HR_ARRAY**", cursor.getString(cursor.getColumnIndex(KEY_HR_ARRAY)));
-                Log.d("**CURSOR_HR_TIMES**", cursor.getString(cursor.getColumnIndex(KEY_HR_TIMES)));
-                Log.d("**CURSOR_GSR_ARRA**", cursor.getString(cursor.getColumnIndex(KEY_GSR_ARRAY)));
-                Log.d("**CURSOR_GSR_TIME**", cursor.getString(cursor.getColumnIndex(KEY_GSR_TIMES)));
-            } while (cursor.moveToNext());
-        }
-    }
-
     public int appenHR(long id, int[] hr, long[] hrTimes) {
         SQLiteDatabase db = this.getWritableDatabase();
 
@@ -145,8 +130,8 @@ public class DatabaseHandler extends SQLiteOpenHelper{
             hrTimesString = cursor.getString(cursor.getColumnIndex(KEY_HR_TIMES));
             for(int i = 0; i < hr.length; i++) {
                 if(hr[i] > 0) {
-                    hrString += "," + hr[i];
-                    hrTimesString += "," + hrTimes[i];
+                    hrString += hr[i] + ",";
+                    hrTimesString += hrTimes[i] + ",";
                 }
             }
         }
@@ -170,8 +155,8 @@ public class DatabaseHandler extends SQLiteOpenHelper{
             gsrTimesString = cursor.getString(cursor.getColumnIndex(KEY_GSR_TIMES));
             for(int i = 0; i < gsr.length; i++) {
                 if(gsr[i] > 0) {
-                    gsrString += "," + gsr[i];
-                    gsrTimesString += "," + gsrTimes[i];
+                    gsrString += gsr[i]+",";
+                    gsrTimesString += gsrTimes[i]+",";
                 }
             }
         }

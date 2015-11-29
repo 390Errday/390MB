@@ -78,8 +78,16 @@ public class CurrentSessionActivity extends AppCompatActivity {
     }
 
     //onClickListener for startMovieButton
-    public void startMovie(View view) {
-        MSBandService.startSession();
+    public void startButton(View view) {
+        if(MSBandService.inSession) {
+            MSBandService.stopSession();
+            startSessionButton.setText("Start Session");
+        }
+        else {
+            MSBandService.startSession();
+            startSessionButton.setText("Stop Session");
+        }
+
     }
 
     class UpdateHr implements Runnable {

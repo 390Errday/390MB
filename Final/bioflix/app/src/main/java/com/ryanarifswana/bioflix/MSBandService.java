@@ -46,8 +46,8 @@ public class MSBandService extends Service {
     public final static String BUNDLE_GSR_RESISTANCE = "resistance";
     public final static String BUNDLE_TIMER_TIME = "time";
 
-    private final static int HRBUFFER = 5;     //buffer before writing to db
-    private final static int GSRBUFFER = 5;
+    private final static int HRBUFFER = 20;     //buffer before writing to db
+    private final static int GSRBUFFER = 10;
 
     private static long baseTime;
 
@@ -73,8 +73,6 @@ public class MSBandService extends Service {
     private static Bundle errBundle;
     private static DatabaseHandler db;
     private static Handler handler;
-
-
 
     public class LocalBinder extends Binder {
         MSBandService getService() {
@@ -122,6 +120,7 @@ public class MSBandService extends Service {
 
     public static void stopSession() {
         db.endSession(sessionId, System.currentTimeMillis());
+        handler.removeCallbacksAndMessages(null);
         inSession = false;
     }
 
@@ -142,14 +141,10 @@ public class MSBandService extends Service {
         hrArray[hrIndex] = bundle.getInt(BUNDLE_HR_HR);
         hrTimeArray[hrIndex] = getElapsedTime();
         if(hrIndex == HRBUFFER - 1) {
-            Log.d("*******BEFORE:", "BEFORE********");
-            db.deleteMe();
             db.appenHR(sessionId, hrArray, hrTimeArray);
             hrArray = new int[HRBUFFER];
             hrTimeArray = new long[HRBUFFER];
             hrIndex = 0;
-            Log.d("*******AFTER:", "AFTER********");
-            db.deleteMe();
         }
         else {
             hrIndex++;
