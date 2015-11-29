@@ -346,5 +346,4 @@ public class MSBandService extends Service {
             return null;
         }
     }
-
 }

@@ -23,6 +23,8 @@ import java.lang.ref.WeakReference;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class CurrentSessionActivity extends AppCompatActivity {
     private String movieName;
@@ -109,18 +111,10 @@ public class CurrentSessionActivity extends AppCompatActivity {
             this.updatedTime = updatedTime;
         }
         public void run() {
-            int secDiff = (int) updatedTime / 1000;
-            int timerSeconds = secDiff%60;
-            secDiff = (secDiff - timerSeconds) / 60;
-            int timerMinutes = secDiff%60;
-            secDiff = (secDiff - timerMinutes) / 60;
-            int timerHours = secDiff%24;
-            String timerText = (timerHours == 0) ? "00" : String.valueOf(timerHours);
-            timerText += ":";
-            timerText += (timerMinutes == 0) ? "00" : String.valueOf(timerMinutes);
-            timerText += ":";
-            timerText += (timerSeconds == 0) ? "00" : String.valueOf(timerSeconds);
-            timer.setText(timerText);
+            Date d = new Date(updatedTime);
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            timer.setText(sdf.format(d));
         }
     }
 
