@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.ResultReceiver;
 import android.os.SystemClock;
@@ -35,15 +36,15 @@ public class MSBandService extends Service {
     static MSBandService bandService = null;
     public final static int MSG_ERROR = 0;
     public final static int MSG_BAND_NOT_REGISTERED = 1;
-    public final static int     MSG_HR_TICK = 2;
-    public final static int     MSG_GSR_TICK = 3;
+    public final static int MSG_HR_TICK = 2;
+    public final static int MSG_GSR_TICK = 3;
+    public final static int MSG_TIMER_UPDATE = 4;
 
     public final static String BUNDLE_ERROR_TEXT = "err";
-    public final static String  BUNDLE_HR_HR = "hr";
-    public final static String  BUNDLE_HR_QUALITY = "quality";
-    public final static String  BUNDLE_HR_TIME = "time";
-    public final static String  BUNDLE_GSR_RESISTANCE = "resistance";
-    public final static String  BUNDLE_GSR_TIME = "time";
+    public final static String BUNDLE_HR_HR = "hr";
+    public final static String BUNDLE_HR_QUALITY = "quality";
+    public final static String BUNDLE_GSR_RESISTANCE = "resistance";
+    public final static String BUNDLE_TIMER_TIME = "time";
 
     private final static int HRBUFFER = 5;     //buffer before writing to db
     private final static int GSRBUFFER = 5;
@@ -68,8 +69,10 @@ public class MSBandService extends Service {
     private static ResultReceiver resultReceiver;
     private static Bundle hrBundle;
     private static Bundle gsrBundle;
+    private static Bundle timerBundle;
     private static Bundle errBundle;
     private static DatabaseHandler db;
+    private static Handler handler;
 
 
 
@@ -88,6 +91,7 @@ public class MSBandService extends Service {
         sessionViewerName =  intent.getStringExtra("viewerName");
         hrBundle = new Bundle();
         gsrBundle = new Bundle();
+        timerBundle = new Bundle();
         errBundle = new Bundle();
         hrArray = new int[HRBUFFER];
         hrTimeArray = new long[HRBUFFER];
@@ -96,26 +100,35 @@ public class MSBandService extends Service {
         hrIndex = 0;
         gsrIndex = 0;
         inSession = false;
+        handler = new Handler();
         return mBinder;
     }
 
     public static void startSession() {
         if(!inSession) {
             sessionId = db.newSession(sessionMovieName, sessionViewerName, System.currentTimeMillis());
-            inSession = true;
             baseTime = System.currentTimeMillis();
+            inSession = true;
+            startTimer();
+        }
+    }
+
+    public static void continueSession() {
+        if(!inSession) {
+            baseTime = System.currentTimeMillis() - baseTime;
             Log.d("startSession()", "sessionStarted!");
         }
     }
 
     public static void stopSession() {
-        db.endSession(sessionId, getElapsedTime());
+        db.endSession(sessionId, System.currentTimeMillis());
         inSession = false;
     }
 
     public void startHeartRate() {
         new HeartRateSubscriptionTask().execute();
     }
+
     public void startGsr() {
         new GsrSubscriptionTask().execute();
     }
@@ -167,6 +180,17 @@ public class MSBandService extends Service {
         return System.currentTimeMillis() - baseTime;
     }
 
+    private static void startTimer() {
+        handler.postDelayed(new Runnable() {
+            public void run() {
+                timerBundle.clear();
+                timerBundle.putLong(BUNDLE_TIMER_TIME, getElapsedTime());
+                resultReceiver.send(MSG_TIMER_UPDATE, timerBundle);
+                handler.postDelayed(this, 1000);
+            }
+        }, 1000);
+    }
+
     private BandHeartRateEventListener mHeartRateEventListener = new BandHeartRateEventListener() {
         @Override
         public void onBandHeartRateChanged(final BandHeartRateEvent event) {
@@ -175,7 +199,6 @@ public class MSBandService extends Service {
                 hrBundle.clear();
                 hrBundle.putInt(BUNDLE_HR_HR, event.getHeartRate());
                 hrBundle.putString(BUNDLE_HR_QUALITY, event.getQuality().toString());
-                hrBundle.putLong(BUNDLE_HR_TIME, event.getTimestamp());
                 resultReceiver.send(MSG_HR_TICK, hrBundle);
                 if(inSession) addHr(hrBundle);
             }
@@ -189,7 +212,6 @@ public class MSBandService extends Service {
                 Log.d("GSR Tick", "" + event.getTimestamp());
                 gsrBundle.clear();
                 gsrBundle.putInt(BUNDLE_GSR_RESISTANCE, event.getResistance());
-                gsrBundle.putLong(BUNDLE_GSR_TIME, event.getTimestamp());
                 resultReceiver.send(MSG_GSR_TICK, gsrBundle);
                 if(inSession) addGsr(gsrBundle);
             }

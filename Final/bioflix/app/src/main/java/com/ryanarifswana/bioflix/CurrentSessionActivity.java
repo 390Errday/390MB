@@ -20,6 +20,9 @@ import android.widget.Chronometer;
 import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class CurrentSessionActivity extends AppCompatActivity {
     private String movieName;
@@ -99,6 +102,28 @@ public class CurrentSessionActivity extends AppCompatActivity {
         }
     }
 
+    class UpdateTimer implements Runnable {
+        long updatedTime;
+
+        public UpdateTimer(long updatedTime) {
+            this.updatedTime = updatedTime;
+        }
+        public void run() {
+            int secDiff = (int) updatedTime / 1000;
+            int timerSeconds = secDiff%60;
+            secDiff = (secDiff - timerSeconds) / 60;
+            int timerMinutes = secDiff%60;
+            secDiff = (secDiff - timerMinutes) / 60;
+            int timerHours = secDiff%24;
+            String timerText = (timerHours == 0) ? "00" : String.valueOf(timerHours);
+            timerText += ":";
+            timerText += (timerMinutes == 0) ? "00" : String.valueOf(timerMinutes);
+            timerText += ":";
+            timerText += (timerSeconds == 0) ? "00" : String.valueOf(timerSeconds);
+            timer.setText(timerText);
+        }
+    }
+
     public void showRegisterBandSnackbar() {
         Snackbar snackbar = Snackbar
             .make(mainLayout, "You haven't given consent to access heart rate yet.", Snackbar.LENGTH_LONG)
@@ -151,8 +176,11 @@ public class CurrentSessionActivity extends AppCompatActivity {
                 case MSBandService.MSG_BAND_NOT_REGISTERED:
                     showRegisterBandSnackbar();
                     break;
+                case MSBandService.MSG_TIMER_UPDATE:
+                    runOnUiThread(new UpdateTimer(resultData.getLong(MSBandService.BUNDLE_TIMER_TIME)));
+                    break;
                 case MSBandService.MSG_ERROR:
-                    Log.d("Error: ", resultData.getString(MSBandService.BUNDLE_ERROR_TEXT));
+                    Log.d("Error: ", ""+resultData.getString(MSBandService.BUNDLE_ERROR_TEXT));
                     break;
             }
         }
