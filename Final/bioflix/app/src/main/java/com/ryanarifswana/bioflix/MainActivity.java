@@ -63,9 +63,6 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
         setFloatingActionButton();
         setMovieRecyclerView();
-        Log.e("currentThreadTimeMillis", "" + SystemClock.currentThreadTimeMillis());
-        Log.e("elapsedRealtime", ""+SystemClock.elapsedRealtime());
-        Log.e("System.curr", ""+System.currentTimeMillis());
     }
 
     @Override
@@ -103,7 +100,6 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.d("fab:", "fab clicked!");
                 startNewSessionActivity();
             }
         });

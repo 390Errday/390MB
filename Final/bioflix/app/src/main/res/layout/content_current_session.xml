@@ -55,7 +55,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
-                android:layout_marginLeft="10dp">
+                android:layout_marginLeft="10dp"
+                android:outlineProvider="background">
 
                 <View android:layout_width="130dp"
                     android:layout_height="130dp"
@@ -64,20 +65,23 @@
                     android:autoText="false"
                     android:id="@+id/circleHr"
                     android:focusable="false"
-                    android:contextClickable="false" />
+                    android:contextClickable="false"
+                    android:focusableInTouchMode="false" />
 
                 <TextView
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
-                    android:textAppearance="?android:attr/textAppearanceLarge"
-                    android:text="0"
+                    android:text="..."
                     android:id="@+id/hrText"
                     android:textColor="@color/colorPrimaryLightest"
-                    android:phoneNumber="true"
                     android:textSize="35dp"
                     android:layout_gravity="center"
                     android:textAlignment="center"
-                    android:singleLine="false" />
+                    android:singleLine="true"
+                    android:layout_margin="10dp"
+                    android:elegantTextHeight="false"
+                    android:enabled="false" />
+
             </FrameLayout>
 
             <FrameLayout
@@ -98,20 +102,30 @@
                 <TextView
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
-                    android:text="0"
+                    android:text="..."
                     android:id="@+id/gsrText"
-                    android:textAppearance="?android:attr/textAppearanceLarge"
                     android:textColor="@color/colorPrimaryLightest"
                     android:textSize="35dp"
                     android:layout_gravity="center"
                     android:textAlignment="center"
-                    android:allowUndo="false" />
+                    android:singleLine="true" />
 
             </FrameLayout>
 
         </RelativeLayout>
 
     </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Warning"
+        android:id="@+id/warningText"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@+id/linearLayout"
+        android:textColor="@color/colorAccentLightest"
+        android:textSize="16sp" />
 
     <Button
         android:layout_width="wrap_content"
@@ -120,12 +134,13 @@
         android:id="@+id/startButton"
         android:onClick="startButton"
         android:layout_gravity="center_horizontal"
-        android:background="@color/colorPrimaryDark"
-        android:textColor="@color/colorWhiteLightest"
+        android:background="@color/ripple_material_dark"
+        android:textColor="@color/primary_material_light"
         android:paddingLeft="8dp"
         android:paddingRight="8dp"
-        android:layout_below="@+id/linearLayout"
+        android:layout_below="@+id/warningText"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp" />
+        android:layout_marginTop="2dp"
+        android:clickable="false" />
 
 </RelativeLayout>

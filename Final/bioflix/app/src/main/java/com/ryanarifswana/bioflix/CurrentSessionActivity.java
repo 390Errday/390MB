@@ -5,6 +5,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.media.Image;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -16,14 +17,13 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Chronometer;
 import android.widget.TextView;
 
+import com.microsoft.band.sensors.HeartRateQuality;
+
 import java.lang.ref.WeakReference;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Locale;
 import java.util.TimeZone;
 
 public class CurrentSessionActivity extends AppCompatActivity {
@@ -32,12 +32,15 @@ public class CurrentSessionActivity extends AppCompatActivity {
     private TextView hrRateView;
     private TextView gsrView;
     private TextView timer;
+    private TextView warningText;
     private Button startSessionButton;
     MSBandService bandService;
     BandResultsReceiver resultsReceiver;
     boolean serviceBound = false;
+    boolean hrLocked = false;
     CurrentSessionActivity currentSessionActivity;
     CoordinatorLayout mainLayout;
+    SimpleDateFormat timerFormat;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,13 +55,29 @@ public class CurrentSessionActivity extends AppCompatActivity {
         hrRateView = (TextView) findViewById(R.id.hrText);
         gsrView = (TextView) findViewById(R.id.gsrText);
         timer = (TextView) findViewById(R.id.timer);
+        warningText = (TextView) findViewById(R.id.warningText);
         startSessionButton = (Button) findViewById(R.id.startButton);
+        warningText.setVisibility(View.INVISIBLE);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         toolbar.setTitle(movieName);
         setSupportActionBar(toolbar);
+
+        timerFormat = new SimpleDateFormat("HH:mm:ss");
+        timerFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
         bindToService();
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
     }
 
 //    public void onDestroy() {
@@ -68,6 +87,7 @@ public class CurrentSessionActivity extends AppCompatActivity {
 
     private void bindToService() {
         if(!serviceBound) {
+            Log.d("binding", "binding");
             resultsReceiver = new BandResultsReceiver(null);
             Intent intent = new Intent(this, MSBandService.class);
             intent.putExtra("receiver", resultsReceiver);
@@ -90,14 +110,36 @@ public class CurrentSessionActivity extends AppCompatActivity {
 
     }
 
-    class UpdateHr implements Runnable {
-        int updatedHr;
+    public void doNotLocked() {
+        warningText.setText("Acquiring sensors...");
+        warningText.setVisibility(View.VISIBLE);
+        startSessionButton.setClickable(false);
+    }
 
-        public UpdateHr(int updatedHr) {
-            this.updatedHr = updatedHr;
+    public void doLocked() {
+        warningText.setVisibility(View.INVISIBLE);
+        startSessionButton.setClickable(true);
+    }
+
+    class UpdateHr implements Runnable {
+        int hr;
+        String quality;
+
+        public UpdateHr(Bundle hrBundle) {
+            this.hr = hrBundle.getInt(MSBandService.BUNDLE_HR_HR);
+            this.quality = hrBundle.getString(MSBandService.BUNDLE_HR_QUALITY);
         }
         public void run() {
-            hrRateView.setText(""+updatedHr);
+            if(quality.equals(HeartRateQuality.ACQUIRING.toString())) {
+                hrLocked = false;
+                doNotLocked();
+            }
+            else if(quality.equals("LOCKED") && !hrLocked) {
+                Log.d("in elseif", "else");
+                hrLocked = true;
+                doLocked();
+            }
+            hrRateView.setText((hrLocked) ? ""+hr : "...");
         }
     }
 
@@ -108,7 +150,7 @@ public class CurrentSessionActivity extends AppCompatActivity {
             this.updatedGSR = updatedGSR;
         }
         public void run() {
-            gsrView.setText(""+updatedGSR);
+            gsrView.setText((hrLocked) ? ""+updatedGSR : "...");
         }
     }
 
@@ -119,10 +161,7 @@ public class CurrentSessionActivity extends AppCompatActivity {
             this.updatedTime = updatedTime;
         }
         public void run() {
-            Date d = new Date(updatedTime);
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-            timer.setText(sdf.format(d));
+            timer.setText(timerFormat.format(new Date(updatedTime)));
         }
     }
 
@@ -170,7 +209,7 @@ public class CurrentSessionActivity extends AppCompatActivity {
         protected void onReceiveResult(int resultCode, Bundle resultData) {
             switch (resultCode) {
                 case MSBandService.MSG_HR_TICK:
-                    runOnUiThread(new UpdateHr(resultData.getInt(MSBandService.BUNDLE_HR_HR)));
+                    runOnUiThread(new UpdateHr(resultData));
                     break;
                 case MSBandService.MSG_GSR_TICK:
                     runOnUiThread(new UpdateGSR(resultData.getInt(MSBandService.BUNDLE_GSR_RESISTANCE)));

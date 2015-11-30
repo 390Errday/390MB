@@ -190,7 +190,6 @@ public class MSBandService extends Service {
         @Override
         public void onBandHeartRateChanged(final BandHeartRateEvent event) {
             if (event != null) {
-                Log.d("HR Tick", "" + event.getTimestamp());
                 hrBundle.clear();
                 hrBundle.putInt(BUNDLE_HR_HR, event.getHeartRate());
                 hrBundle.putString(BUNDLE_HR_QUALITY, event.getQuality().toString());
@@ -204,7 +203,6 @@ public class MSBandService extends Service {
         @Override
         public void onBandGsrChanged(final BandGsrEvent event) {
             if (event != null) {
-                Log.d("GSR Tick", "" + event.getTimestamp());
                 gsrBundle.clear();
                 gsrBundle.putInt(BUNDLE_GSR_RESISTANCE, event.getResistance());
                 resultReceiver.send(MSG_GSR_TICK, gsrBundle);

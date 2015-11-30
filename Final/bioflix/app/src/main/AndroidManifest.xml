@@ -34,7 +34,8 @@
             android:name=".CurrentSessionActivity"
             android:label="@string/title_activity_current_session"
             android:parentActivityName=".MainActivity"
-            android:theme="@style/AppTheme.NoActionBar" >
+            android:theme="@style/AppTheme.NoActionBar"
+            android:screenOrientation="portrait" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.ryanarifswana.bioflix.MainActivity" />
