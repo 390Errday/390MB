@@ -16,7 +16,13 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
+import android.view.animation.AnimationSet;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.microsoft.band.sensors.HeartRateQuality;
@@ -34,6 +40,7 @@ public class CurrentSessionActivity extends AppCompatActivity {
     private TextView timer;
     private TextView warningText;
     private Button startSessionButton;
+    private ImageView heartIcon;
     MSBandService bandService;
     BandResultsReceiver resultsReceiver;
     boolean serviceBound = false;
@@ -41,6 +48,12 @@ public class CurrentSessionActivity extends AppCompatActivity {
     CurrentSessionActivity currentSessionActivity;
     CoordinatorLayout mainLayout;
     SimpleDateFormat timerFormat;
+
+    Animation fadeIn;
+    Animation fadeOut;
+    AnimationSet animation = new AnimationSet(false);
+    private int fadeOutTime;
+    private int fadeInTime = 50;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +70,7 @@ public class CurrentSessionActivity extends AppCompatActivity {
         timer = (TextView) findViewById(R.id.timer);
         warningText = (TextView) findViewById(R.id.warningText);
         startSessionButton = (Button) findViewById(R.id.startButton);
+        heartIcon = (ImageView) findViewById(R.id.heartIcon);
         warningText.setVisibility(View.INVISIBLE);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -68,6 +82,18 @@ public class CurrentSessionActivity extends AppCompatActivity {
 
         bindToService();
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+        //Icon animations
+        fadeIn = new AlphaAnimation(0.4f, 1.0f);
+        fadeIn.setRepeatCount(Animation.INFINITE);
+        fadeOut = new AlphaAnimation(1.0f, 0.4f);
+        fadeOut.setRepeatCount(Animation.INFINITE);
+        fadeIn.setInterpolator(new DecelerateInterpolator());
+        fadeOut.setInterpolator(new AccelerateInterpolator());
+        fadeIn.setDuration(fadeInTime);
+        fadeOut.setStartOffset(fadeInTime);
+        animation.addAnimation(fadeIn);
+        animation.addAnimation(fadeOut);
     }
 
     @Override
@@ -130,17 +156,30 @@ public class CurrentSessionActivity extends AppCompatActivity {
             this.quality = hrBundle.getString(MSBandService.BUNDLE_HR_QUALITY);
         }
         public void run() {
+            fadeOutTime = calculateFadeOutTime(hr);
             if(quality.equals(HeartRateQuality.ACQUIRING.toString())) {
                 hrLocked = false;
                 doNotLocked();
             }
             else if(quality.equals("LOCKED") && !hrLocked) {
-                Log.d("in elseif", "else");
                 hrLocked = true;
+                fadeOut.setDuration(fadeOutTime);
+                heartIcon.startAnimation(animation);
                 doLocked();
             }
-            hrRateView.setText((hrLocked) ? ""+hr : "...");
+            if(hrLocked) {
+                fadeOut.setDuration(fadeOutTime);
+                hrRateView.setText(""+hr);
+            }
+            else{
+                hrRateView.setText("...");
+            }
+
         }
+    }
+
+    private int calculateFadeOutTime(int hr) {
+        return (60000 - (fadeInTime * 60)) / hr;
     }
 
     class UpdateGSR implements Runnable {
